@@ -23,6 +23,8 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		'dblScreenHeight_cm',25;... % cm; measured [29]
 		
 		%stimulus control variables
+		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+		'dblCornerSize',1/30;... % fraction of screen width
 		'vecStimPosX_deg',0;... % deg; relative to center of screen
 		'vecStimPosY_deg',0;... % deg; relative to center of screen
 		'vecStimulusSize_deg',[16];...%circular window in degrees
@@ -137,6 +139,8 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		if intParam==0 %add strStimType & ScreenDistance_cm & SubjectPosX_cm & SubjectPosY_cm
 			for intStim=1:intStimTypes
 				sStimObject(intStim).StimType = strStimType;
+				sStimObject(intStim).CornerTrigger = sStimParams.intCornerTrigger;
+				sStimObject(intStim).CornerSize =  sStimParams.dblCornerSize;
 				sStimObject(intStim).ScreenDistance_cm = sStimParams.dblScreenDistance_cm;
 				sStimObject(intStim).SubjectPosX_cm = sStimParams.dblSubjectPosX_cm;
 				sStimObject(intStim).SubjectPosY_cm = sStimParams.dblSubjectPosY_cm;

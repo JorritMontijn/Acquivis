@@ -10,6 +10,8 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	if ~isempty(sStimObject(end).LinLocOn)
 		sStimObject(end+1) = sStimObject(end);
 	end
+	intCornerTrigger = sStimObject(end).CornerTrigger; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+	dblCornerSize = sStimObject(end).CornerSize; % fraction of screen width
 	matLinLoc = sStimObject(end).LinLoc;
 	matUsedLocOn = sStimObject(end).UsedLinLocOn;
 	matUsedLocOff = sStimObject(end).UsedLinLocOff;
@@ -18,6 +20,8 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	dblLuminance = sStimObject(end).Luminance;
 	dblBackground = sStimObject(end).Background;
 	boolAntiAlias = sStimObject(end).AntiAlias;
+	intScreenWidth_pix =  sStimObject(end).ScreenWidth_pix;
+	intScreenHeight_pix =  sStimObject(end).ScreenHeight_pix;
 	
 	%% define locations
 	if numel(find(matUsedLocOn==min(matUsedLocOn(:)))) >= intOnOffCheckers
@@ -122,4 +126,19 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	
 	%change to PTB-range
 	matImageRGB = repmat(uint8(round(matChecker*255)),[1 1 3]);
+	
+	% add small set of pixels to corner of stimulus
+	if intCornerTrigger > 0
+		%calc size
+		intCornerPix = floor(dblCornerSize*intScreenWidth_pix);
+		if intCornerTrigger == 1 %upper left
+			matImageRGB(1:intCornerPix,1:intCornerPix,:) = 255;
+		elseif intCornerTrigger == 2 %upper right
+			matImageRGB(1:intCornerPix,(end-intCornerPix+1):end,:) = 255;
+		elseif intCornerTrigger == 3 %lower left
+			matImageRGB((end-intCornerPix+1):end,1:intCornerPix,:) = 255;
+		elseif intCornerTrigger == 4 %lower right
+			matImageRGB((end-intCornerPix+1):end,(end-intCornerPix+1):end,:) = 255;
+		end
+	end
 end

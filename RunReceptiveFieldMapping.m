@@ -8,8 +8,11 @@
 	%#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
 	
 	%% define paths
+	strThisPath = mfilename('fullpath');
+	strThisPath = strThisPath(1:(end-numel(mfilename)));
 	strLogDir = 'D:\Data\Raw\ePhys\StimLogs'; %where are the logs saved?
-	strTexDir = 'C:\Code\Acquisition\ElectroPhysiology\StimulusTextures'; %where are the stimulus textures saved?
+	strTexSubDir = 'StimulusTextures';
+	strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 	
 	%% query user input
 	%define output filename
@@ -71,6 +74,8 @@
 	
 	%screen variables
 	sStimParams.intUseScreen = 1; %which screen to use
+	sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+	sStimParams.dblCornerSize = 1/30; % fraction of screen width
 	sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]
 	sStimParams.dblScreenHeight_cm = 25; % cm; measured [29]
 	sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
@@ -158,6 +163,10 @@
 		dblStimFrameRate=Screen('FrameRate', ptrWindow);
 		intStimFrameRate = round(dblStimFrameRate);
 		dblStimFrameDur = mean(1/dblStimFrameRate);
+		dblInterFlipInterval = Screen('GetFlipInterval', ptrWindow);
+		if dblStimFrameDur/dblInterFlipInterval > 1.05 || dblStimFrameDur/dblInterFlipInterval < 0.95
+			warning([mfilename ':InconsistentFlipDur'],sprintf('Something iffy with flip speed and monitor refresh rate detected; frame duration is %fs, while flip interval is %fs!',dblStimFrameDur,dblInterFlipInterval));
+		end
 		
 		%% check escape
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
@@ -197,7 +206,8 @@
 		while ~CheckEsc()
 			%trial start
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
-			dblTrialStartFlip = Screen('Flip', ptrWindow);
+			dblLastFlip = Screen('Flip', ptrWindow);
+			dblTrialStartFlip = dblLastFlip;
 			
 			%% prepare stimulus
 			ptrCreationTime = tic;
@@ -230,13 +240,14 @@
 			while dblPreBlankDur <= (dblStimOnSecs - dblStartSecs - dblStimFrameDur)
 				%do nothing
 				Screen('FillRect',ptrWindow, sStimParams.intBackground);
-				dblLastFlip = Screen('Flip', ptrWindow);
+				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblPreBlankDur = dblLastFlip - dblTrialStartFlip;
 			end
 			
 			%% show stimulus
 			Screen('DrawTexture',ptrWindow,ptrTex);
-			dblStimOnFlip = Screen('Flip', ptrWindow);
+			dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
+			dblStimOnFlip = dblLastFlip;
 			%send trigger pulse
 			if intDasCard==1
 				calllib(sDas.strDLL, 'DO_Bit', sDas.StimOnBit, 1);
@@ -249,13 +260,14 @@
 			while dblStimDur <= (dblStimDurSecs - dblStimFrameDur*2)
 				%do nothing
 				Screen('DrawTexture',ptrWindow,ptrTex);
-				dblLastFlip = Screen('Flip', ptrWindow);
+				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblStimDur = dblLastFlip - dblStimOnFlip;
 			end
 			
 			%back to background
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
-			dblStimOffFlip = Screen('Flip', ptrWindow);
+			dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
+			dblStimOffFlip = dblLastFlip;
 			
 			%send trigger for stimulus off
 			if intDasCard==1
@@ -289,7 +301,7 @@
 			while boolNoFlip || dblThisTrialDur < (dblTrialDur - dblStimFrameDur*2)
 				%do nothing
 				Screen('FillRect',ptrWindow, sStimParams.intBackground);
-				dblLastFlip = Screen('Flip', ptrWindow);
+				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblThisTrialDur = dblLastFlip - dblTrialStartFlip;
 				boolNoFlip = false;
 			end
@@ -341,7 +353,6 @@
 		%save data
 		structEP.sStimParams = sStimParams;
 		structEP.sStimObject = sStimObject;
-		structEP.sStimTypeList = sStimTypeList;
 		save([strLogDir filesep strFilename], 'structEP','sDas');
 		
 		%% catch me and throw me

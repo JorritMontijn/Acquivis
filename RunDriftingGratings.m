@@ -4,8 +4,11 @@
 	%#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
 	
 	%% define paths
+	strThisPath = mfilename('fullpath');
+	strThisPath = strThisPath(1:(end-numel(mfilename)));
 	strLogDir = 'D:\Data\Raw\ePhys\StimLogs'; %where are the logs saved?
-	strTexDir = 'C:\Code\Acquisition\ElectroPhysiology\StimulusTextures'; %where are the stimulus textures saved?
+	strTexSubDir = 'StimulusTextures';
+	strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
 	
 	%% query user input
 	%define output filename
@@ -19,9 +22,9 @@
 	cd(strOldPath);
 	boolAcceptInput = false;
 	while ~boolAcceptInput
-		strMouse = 't';%input('session name (mouse/block): ', 's');
+		strMouse = input('Block name and mouse (e.g., B3_MouseX): ', 's');
 		c = clock;
-		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),mfilename,strMouse);
+		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strMouse,mfilename);
 		if isa(strFilename,'char') && ~isempty(strFilename)
 			if exist([strLogDir filesep strFilename],'file') || exist([strLogDir filesep strFilename '.mat'],'file')
 				strResp = input(['"' strFilename '.mat" already exists. Do you want to overwrite the file? (Y/N) : '],'s');
@@ -72,6 +75,8 @@
 	
 	%screen variables
 	sStimParams.intUseScreen = 1; %which screen to use
+	sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+	sStimParams.dblCornerSize = 1/30; % fraction of screen width
 	sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]
 	sStimParams.dblScreenHeight_cm = 25; % cm; measured [29]
 	sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));

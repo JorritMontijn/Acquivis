@@ -25,6 +25,8 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		'intScreenHeight_pix',nan;... % cm
 		
 		%stimulus control variables
+		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
+		'dblCornerSize',1/30;... % fraction of screen width
 		'boolAntiAlias',true;... % anti-alias? set to "false" to improve performance
 		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
 		'dblCheckerSizeX_deg',5;... % deg;  width of checker
@@ -143,6 +145,8 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	sStimObject = struct;
 	%stim variables
 	sStimObject(intStim).StimType = strStimType;
+	sStimObject(intStim).CornerTrigger = sStimParams.intCornerTrigger;
+	sStimObject(intStim).CornerSize =  sStimParams.dblCornerSize;
 	sStimObject(intStim).CheckersEdgeX = vecCheckersEdgeX;
 	sStimObject(intStim).CheckersEdgeY = vecCheckersEdgeY;
 	sStimObject(intStim).LinLoc = matLinLoc;

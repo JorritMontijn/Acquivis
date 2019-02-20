@@ -24,6 +24,8 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	%% extract grating variables
 	ptrWindow =	sGratingObject.ptrWindow;
 	strStimType = sGratingObject.StimType;
+	intCornerTrigger = sGratingObject.CornerTrigger;
+	dblCornerSize =  sGratingObject.CornerSize;
 	intScreenWidth_pix = sGratingObject.ScreenPixX;
 	intScreenHeight_pix = sGratingObject.ScreenPixY;
 	dblDegShiftX = sGratingObject.StimPosX_deg;
@@ -81,20 +83,37 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	matStim = (matStimPart + matBackgroundPart)*(dblLuminance/100); %add them together and we're done!
 	matStim = round(matStim*255); %change to PTB-range
 	
-	%display on screen or extract directly?
-	boolUsePTB = true;
-	if ~boolUsePTB
-		%% extract screen pixels
-		intOffsetX = 1+(intSizeX-intScreenWidth_pix)/2;
-		intOffsetY = 1+(intSizeY-intScreenHeight_pix)/2;
-		vecSelectRect = [intOffsetX intOffsetY (intScreenWidth_pix)+intOffsetX-1 (intScreenHeight_pix)+intOffsetY-1];
-		matImageRGB = uint8(matStim(vecSelectRect(2):vecSelectRect(4),vecSelectRect(1):vecSelectRect(3)));
-		matImageRGB = repmat(matImageRGB,[1 1 3]);
-		imshow(matImageRGB)
-	else
+	%% extract screen pixels
+	intOffsetX = 1+(intSizeX-intScreenWidth_pix)/2;
+	intOffsetY = 1+(intSizeY-intScreenHeight_pix)/2;
+	vecSelectRect = [intOffsetX intOffsetY (intScreenWidth_pix)+intOffsetX-1 (intScreenHeight_pix)+intOffsetY-1];
+	matImageRGB = uint8(matStim(vecSelectRect(2):vecSelectRect(4),vecSelectRect(1):vecSelectRect(3)));
+	matImageRGB = repmat(matImageRGB,[1 1 3]);
+	
+	%% add small set of pixels to corner of stimulus
+	if intCornerTrigger > 0
+		%calc size
+		intCornerPix = floor(dblCornerSize*intScreenWidth_pix);
+		if intCornerTrigger == 1 %upper left
+			matImageRGB(1:intCornerPix,1:intCornerPix,:) = 255;
+		elseif intCornerTrigger == 2 %upper right
+			matImageRGB(1:intCornerPix,(end-intCornerPix+1):end,:) = 255;
+		elseif intCornerTrigger == 3 %lower left
+			matImageRGB((end-intCornerPix+1):end,1:intCornerPix,:) = 255;
+		elseif intCornerTrigger == 4 %lower right
+			matImageRGB((end-intCornerPix+1):end,(end-intCornerPix+1):end,:) = 255;
+		end
+	end
+	
+	%% display on screen while building?
+	intShowOnScreen = 2;
+	if intShowOnScreen == 1
+		%display
+		imshow(matImageRGB);drawnow;
+	elseif intShowOnScreen == 2
 		%% display on screen
-		ptrTex = Screen('MakeTexture', ptrWindow, matStim);
-		Screen('DrawTexture',ptrWindow,ptrTex); %invert to align with unit circle (or invert matMod)
+		ptrTex = Screen('MakeTexture', ptrWindow, matImageRGB);
+		Screen('DrawTexture',ptrWindow,ptrTex);
 		Screen('Flip',ptrWindow);
 		pause(0.01);
 		matImageRGB = Screen('GetImage', ptrWindow);
