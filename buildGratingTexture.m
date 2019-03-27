@@ -38,6 +38,24 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	dblOrientation = sGratingObject.Orientation;
 	dblDegsPerSpatCycle = sGratingObject.DegsPerSpatCycle;
 	dblPhase01 = sGratingObject.Phase01;
+	intUseGPU = sGratingObject.UseGPU;
+	intAntiAlias = sGratingObject.AntiAlias;
+	
+	%% check whether gpu computing is requested
+	if intUseGPU > 0
+		objDevice = gpuDevice();
+		if objDevice.Index ~= intUseGPU
+			fprintf('GPU processing on device %d requested\n',intUseGPU);
+			objDevice = gpuDevice(intUseGPU);
+			fprintf('\b; Device "%s" selected; Compute capability is %s\n',objDevice.Name,objDevice.ComputeCapability);
+		end
+		if ~existsOnGPU(matMapDegsXY)
+			matMapDegsXY = gpuArray(matMapDegsXY);
+		end
+	elseif strcmp(class(matMapDegsXY),'gpuArray')
+		warning([mfilename ':InconsistentInputGPU'],'GPU processing not requested, but input is GPU array! Gathering array to RAM');
+		matMapDegsXY = gather(matMapDegsXY);
+	end
 	
 	%% supersample for grating construction, then subsample for anti-alias	
 	%get maps
@@ -53,22 +71,34 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	%matMapRotY_deg = reshape(matMapRotXY_deg(:,2),size(matMapY_deg)); %unused
 	
 	%super-sample
-	matMapXSuperSample2_deg = interp2(matMapRotX_deg);
+	if intAntiAlias > 0
+		matMapXSuperSample2_deg = interp2(matMapRotX_deg,intAntiAlias);
+	else
+		matMapXSuperSample2_deg = matMapRotX_deg;
+	end
 	%matMapYSuperSample2_deg = interp2(matMapRotY_deg); %unused
 	
 	if strcmpi(strStimType,'SquareGrating')
 		%build the square-wave grating
 		matMod = mod(matMapXSuperSample2_deg-dblDegsPerSpatCycle*dblPhase01,dblDegsPerSpatCycle);  %every pixPerCycle pixels the grid flips back to 0 with an offset of phaseOffset
 		matGratSuperSample2 = (matMod >= dblDegsPerSpatCycle/2)*(dblContrast/100); %create logical 1s and 0s to build the black/white grating
-		matGrat = imresize(matGratSuperSample2,size(matMapRotX_deg),'bilinear');
 	elseif strcmpi(strStimType,'SineGrating')
 		%build the sine-wave grating
 		matCycles = (matMapXSuperSample2_deg-dblDegsPerSpatCycle*dblPhase01)/dblDegsPerSpatCycle;
 		matWave = sin(matCycles*2*pi)/2+0.5;  %every pixPerCycle pixels the grid flips back to 0 with an offset of phaseOffset
 		matGratSuperSample2 = matWave*(dblContrast/100); %create logical 1s and 0s to build the black/white grating
-		matGrat = imresize(matGratSuperSample2,size(matMapRotX_deg),'bilinear');
 	else
 		error([mfilename ':StimTypeUnknown'],sprintf('Stimulus type "%s" not recognized',strStimType));
+	end
+	
+	%resize from super-sample
+	if intAntiAlias
+		if intUseGPU
+			strMethod = 'bicubic';
+		else
+			strMethod = 'bilinear';
+		end
+		matGrat = imresize(matGratSuperSample2,size(matMapRotX_deg),strMethod);
 	end
 	
 	%shift window
@@ -106,13 +136,13 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 	end
 	
 	%% display on screen while building?
-	intShowOnScreen = 2;
+	intShowOnScreen = 0;
 	if intShowOnScreen == 1
 		%display
 		imshow(matImageRGB);drawnow;
 	elseif intShowOnScreen == 2
 		%% display on screen
-		ptrTex = Screen('MakeTexture', ptrWindow, matImageRGB);
+		ptrTex = Screen('MakeTexture', ptrWindow, gather(matImageRGB));
 		Screen('DrawTexture',ptrWindow,ptrTex);
 		Screen('Flip',ptrWindow);
 		pause(0.01);

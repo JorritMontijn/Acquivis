@@ -33,6 +33,8 @@ function matTexture = buildStimulusTexture(sStimObject,sStimParams)
 		sGratingObject.Luminance = sStimObject.Luminance;
 		sGratingObject.Orientation = sStimObject.Orientation;
 		sGratingObject.DegsPerSpatCycle = 1/sStimObject.SpatialFrequency;
+		sGratingObject.AntiAlias = sStimObject.AntiAlias;
+		sGratingObject.UseGPU = sStimParams.intUseGPU;
 		
 		%% run
 		matTexture = zeros(intScreenHeight_pix,intScreenWidth_pix,intFramesPerCycle,'uint8');
@@ -41,7 +43,7 @@ function matTexture = buildStimulusTexture(sStimObject,sStimParams)
 			pause(0);
 			sGratingObject.Phase01 = mod(intFrame/intFramesPerCycle,1);
 			matSingleFrame = buildGratingTexture(sGratingObject,matMapDegsXY);
-			matTexture(:,:,intFrame)=matSingleFrame(:,:,1);
+			matTexture(:,:,intFrame)=gather(matSingleFrame(:,:,1));
 		end
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		Screen('Flip', ptrWindow);

@@ -27,7 +27,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		%stimulus control variables
 		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 		'dblCornerSize',1/30;... % fraction of screen width
-		'boolAntiAlias',true;... % anti-alias? set to "false" to improve performance
+		'intAntiAlias',1;... % anti-alias? set to "0" to improve performance
 		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
 		'dblCheckerSizeX_deg',5;... % deg;  width of checker
 		'dblCheckerSizeY_deg',5;... % deg; height of checker
@@ -76,7 +76,12 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	
 	%% check if GPU should be used, and specify device
 	if sStimParams.intUseGPU > 0
-		gpuDevice(sStimParams.intUseGPU)
+		objDevice = gpuDevice();
+		if objDevice.Index ~= sStimParams.intUseGPU
+			fprintf('GPU processing on device %d requested\n',sStimParams.intUseGPU);
+			objDevice = gpuDevice(sStimParams.intUseGPU);
+			fprintf('\b; Device "%s" selected; Compute capability is %s\n',objDevice.Name,objDevice.ComputeCapability);
+		end
 	end
 	
 	%% check if screen size is supplied
@@ -95,6 +100,11 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		if ~isnan(intScreenWidth_pix) && ~isnan(intScreenHeight_pix)
 			vecPixX_deg = ((1:intScreenWidth_pix)/intScreenWidth_pix)*dblScreenWidth_deg-dblSubjectPosX_deg;
 			vecPixY_deg = ((1:intScreenHeight_pix)/intScreenHeight_pix)*dblScreenWidth_deg-dblSubjectPosY_deg;
+			%move to gpu
+			if sStimParams.intUseGPU > 0
+				vecPixX_deg = gpuArray(vecPixX_deg);
+				vecPixY_deg = gpuArray(vecPixY_deg);
+			end
 			[mapX,mapY] = meshgrid(vecPixX_deg,vecPixY_deg);
 			matMapDegsXY(:,:,1) = cat(3,mapX,mapY);
 		else
@@ -162,7 +172,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	sStimObject(intStim).Contrast = sStimParams.dblContrast;
 	sStimObject(intStim).Luminance = sStimParams.dblLuminance;
 	sStimObject(intStim).Background = sStimParams.dblBackground;
-	sStimObject(intStim).AntiAlias = sStimParams.boolAntiAlias;
+	sStimObject(intStim).AntiAlias = sStimParams.intAntiAlias;
 	sStimObject(intStim).UseGPU = sStimParams.intUseGPU;
 	
 	%screen & viewing variables

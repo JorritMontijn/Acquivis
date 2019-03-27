@@ -7,6 +7,16 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 	%	Version History:
 	%	2019-01-25	Created by Jorrit Montijn
 	
+	%check whether gpu computing is requested
+	if sStimParams.intUseGPU > 0
+		objDevice = gpuDevice();
+		if objDevice.Index ~= sStimParams.intUseGPU
+			fprintf('GPU processing on device %d requested\n',sStimParams.intUseGPU);
+			objDevice = gpuDevice(sStimParams.intUseGPU);
+			fprintf('\b; Device "%s" selected; Compute capability is %s\n',objDevice.Name,objDevice.ComputeCapability);
+		end
+	end
+	
 	if sStimParams.vecUseMask(1) == 1
 		%% use spheroid-projection mask
 		%extract required variables
@@ -24,6 +34,12 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 		%get locations in pixels
 		vecX_pix = ((1:intSizeMap)-intSizeMap/2);
 		vecY_pix = ((intSizeMap:-1:1)-intSizeMap/2); %invert y to make high values be up
+		
+		%transfer to GPU
+		if sStimParams.intUseGPU > 0
+			vecX_pix = gpuArray(vecX_pix);
+			vecY_pix = gpuArray(vecY_pix);
+		end
 		
 		%get locations in cm
 		vecX_cm = (vecX_pix/intScreenWidth_pix)*dblScreenWidth_cm - dblSubjectPosX_cm;

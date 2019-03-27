@@ -65,7 +65,7 @@
 	sStimParams.dblSubjectPosX_cm = -20; % cm; relative to center of screen
 	sStimParams.dblSubjectPosY_cm = -15; % cm; relative to center of screen
 	sStimParams.dblScreenDistance_cm = 16; % cm; measured
-	sStimParams.vecUseMask = true; %[1] if mask to emulate retinal-space, [0] use screen-space
+	sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 		
 	%receptive field size&location parameters
 	sStimParams.vecStimPosX_deg = 40; % deg; relative to subject
@@ -83,6 +83,8 @@
 	sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 	
 	%stimulus control variables
+	sStimParams.intUseGPU = 1;
+	sStimParams.intAntiAlias = 1;
 	sStimParams.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
 	sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 	sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);

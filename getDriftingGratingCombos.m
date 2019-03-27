@@ -23,6 +23,8 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		'dblScreenHeight_cm',25;... % cm; measured [29]
 		
 		%stimulus control variables
+		'intAntiAlias',1;... % anti-alias? set to "0" to improve performance
+		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
 		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 		'dblCornerSize',1/30;... % fraction of screen width
 		'vecStimPosX_deg',0;... % deg; relative to center of screen
@@ -144,6 +146,8 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 				sStimObject(intStim).ScreenDistance_cm = sStimParams.dblScreenDistance_cm;
 				sStimObject(intStim).SubjectPosX_cm = sStimParams.dblSubjectPosX_cm;
 				sStimObject(intStim).SubjectPosY_cm = sStimParams.dblSubjectPosY_cm;
+				sStimObject(intStim).AntiAlias = sStimParams.intAntiAlias;
+				sStimObject(intStim).UseGPU = sStimParams.intUseGPU;
 			end
 		else
 			strParam = cellParamNames{intParam}; %remove "vec"

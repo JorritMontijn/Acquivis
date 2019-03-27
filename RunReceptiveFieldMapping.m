@@ -70,7 +70,7 @@
 	sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
 	sStimParams.dblSubjectPosY_cm = 0; % cm; relative to center of screen
 	sStimParams.dblScreenDistance_cm = 10; % cm; measured 16
-	sStimParams.vecUseMask = true; %[1] if mask to emulate retinal-space, [0] use screen-space
+	sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 	
 	%screen variables
 	sStimParams.intUseScreen = 1; %which screen to use
@@ -93,8 +93,8 @@
 	sStimParams.intOnOffCheckers = 6; % how many are on/off at any frame?
 	
 	%stimulus control variables
-	sStimParams.intUseGPU = 0; %set to non-zero to use GPU for rendering stimuli
-	sStimParams.boolAntiAlias = true; %use anti-alias?
+	sStimParams.intUseGPU = 1; %set to non-zero to use GPU for rendering stimuli
+	sStimParams.boolAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
 	sStimParams.dblBackground = 0.5; %background intensity (dbl, [0 1])
 	sStimParams.intBackground = round(mean(sStimParams.dblBackground)*255);
 	sStimParams.dblContrast = 100; %contrast; [0-100]
@@ -144,6 +144,7 @@
 		fprintf('Starting PsychToolBox extension...\n');
 		%open window
 		AssertOpenGL;
+		%Screen('Preference', 'SkipSyncTests', 1);
 		KbName('UnifyKeyNames');
 		intScreen = sStimParams.intUseScreen;
 		intOldVerbosity2 = Screen('Preference', 'Verbosity',1); %stop PTB spamming
@@ -213,7 +214,7 @@
 			ptrCreationTime = tic;
 			[matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_crop);
 			intThisTrial = numel(sStimObject);
-			ptrTex = Screen('MakeTexture', ptrWindow, matImageRGB);
+			ptrTex = Screen('MakeTexture', ptrWindow, gather(matImageRGB));
 			dblCreationDur = toc(ptrCreationTime);
 			
 			%Send stimulus identification
@@ -317,7 +318,7 @@
 			
 			%show trial summary
 			dblPercDone = 100*sum(sStimObject(end).UsedLinLocOff(:))/numel(sStimObject(end).UsedLinLocOff);
-			fprintf('Completed trial %d at time=%.3fs (stim dur=%.3fs); coverage is now %.1f%%\n',intThisTrial,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,dblPercDone);
+			fprintf('Completed trial %d at time=%.3fs (stim dur=%.3fs); coverage is now %.1f%%; Stim creation took %.3fs\n',intThisTrial,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,dblPercDone,dblCreationDur);
 		end
 		
 		%% save data

@@ -19,9 +19,26 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	dblContrast = sStimObject(end).Contrast;
 	dblLuminance = sStimObject(end).Luminance;
 	dblBackground = sStimObject(end).Background;
-	boolAntiAlias = sStimObject(end).AntiAlias;
+	intUseGPU = sStimObject(end).UseGPU;
+	intAntiAlias = sStimObject(end).AntiAlias;
 	intScreenWidth_pix =  sStimObject(end).ScreenWidth_pix;
 	intScreenHeight_pix =  sStimObject(end).ScreenHeight_pix;
+	
+	%% check whether gpu computing is requested
+	if intUseGPU > 0
+		objDevice = gpuDevice();
+		if objDevice.Index ~= intUseGPU
+			fprintf('GPU processing on device %d requested\n',intUseGPU);
+			objDevice = gpuDevice(intUseGPU);
+			fprintf('\b; Device "%s" selected; Compute capability is %s\n',objDevice.Name,objDevice.ComputeCapability);
+		end
+		if ~existsOnGPU(matMapDegsXY_crop)
+			matMapDegsXY_crop = gpuArray(matMapDegsXY_crop);
+		end
+	elseif strcmp(class(matMapDegsXY_crop),'gpuArray')
+		warning([mfilename ':InconsistentInputGPU'],'GPU processing not requested, but input is GPU array! Gathering array to RAM');
+		matMapDegsXY_crop = gather(matMapDegsXY_crop);
+	end
 	
 	%% define locations
 	if numel(find(matUsedLocOn==min(matUsedLocOn(:)))) >= intOnOffCheckers
@@ -83,9 +100,9 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	matMapY_deg = matMapDegsXY_crop(:,:,2);
 	
 	%super-sample
-	if boolAntiAlias %supersample x2
-		matMapXSuperSample2_deg = interp2(matMapX_deg);
-		matMapYSuperSample2_deg = interp2(matMapY_deg);
+	if intAntiAlias %supersample x2
+		matMapXSuperSample2_deg = interp2(matMapX_deg,intAntiAlias);
+		matMapYSuperSample2_deg = interp2(matMapY_deg,intAntiAlias);
 	else
 		matMapXSuperSample2_deg = matMapX_deg;
 		matMapYSuperSample2_deg = matMapY_deg;
@@ -96,7 +113,7 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	dblLumOff = dblBackground - (1-dblBackground)*(dblContrast/100);
 	
 	%build checkers
-	matCheckerSuperSample2 = dblBackground*ones(size(matMapXSuperSample2_deg));
+	matCheckerSuperSample2 = dblBackground*ones(size(matMapXSuperSample2_deg),'like',matMapXSuperSample2_deg);
 	for intCheckerOn=1:numel(sStimObject(end).LinLocOn)
 		intLinLocOn = sStimObject(end).LinLocOn(intCheckerOn);
 		[intY,intX] = find(matLinLoc==intLinLocOn);
@@ -120,8 +137,13 @@ function [matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_c
 	matChecker = (dblLuminance/100)*matCheckerSuperSample2;
 	
 	%resize from super-sample
-	if boolAntiAlias
-		matChecker = imresize(matChecker,size(matMapX_deg),'bilinear');
+	if intAntiAlias
+		if intUseGPU
+			strMethod = 'bicubic';
+		else
+			strMethod = 'bilinear';
+		end
+		matChecker = imresize(matChecker,size(matMapX_deg),strMethod);
 	end
 	
 	%change to PTB-range
