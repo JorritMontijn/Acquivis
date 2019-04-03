@@ -8,7 +8,7 @@ VERSION HISTORY
 2019-02-04 
  - Created by Jorrit Montijn
 
-2019-02-04 Version 1.0 [by JM], now supports:
+2019-04-03 Version 1.0 [by JM], now supports:
  - TDT-based data acquisition
  - Stimulus rendering for gratings, sine-waves, and sparse checkers
  - Retinal-space based stimulus presentations
