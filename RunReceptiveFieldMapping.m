@@ -1,19 +1,19 @@
-%function structMP = RunDodecantGratings
+	%function structMP = RunDodecantGratings
 	%8 seconds per trial
 	%8 trial types (max 64 seconds per rep)
 	%10 repetitions = 11 minutes
 	%80 trials in total
-	
+
 	%% suppress m-lint warnings
 	%#ok<*MCCD,*NASGU,*ASGLU,*CTCH>
-	
+
 	%% define paths
 	strThisPath = mfilename('fullpath');
 	strThisPath = strThisPath(1:(end-numel(mfilename)));
 	strLogDir = 'D:\Data\Raw\ePhys\StimLogs'; %where are the logs saved?
 	strTexSubDir = 'StimulusTextures';
 	strTexDir = strcat(strThisPath,strTexSubDir); %where are the stimulus textures saved?
-	
+
 	%% query user input
 	%define output filename
 	fprintf('\n%s started...\n',mfilename);
@@ -31,7 +31,10 @@
 		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),mfilename,strMouse);
 		if isa(strFilename,'char') && ~isempty(strFilename)
 			if exist([strLogDir filesep strFilename],'file') || exist([strLogDir filesep strFilename '.mat'],'file')
-				strResp = input(['"' strFilename '.mat" already exists. Do you want to overwrite the file? (Y/N) : '],'s');
+				warning('off','backtrace')
+				warning([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
+				warning('on','backtrace')
+				strResp = input('Do you want to overwrite the file? (Y/N)','s');
 				if strcmpi(strResp,'Y')
 					boolAcceptInput = true;
 				else
@@ -43,27 +46,49 @@
 		end
 	end
 	fprintf('Saving output to file "%s.mat"\n',strFilename);
+
+	%% check if temporary directory exists, clean or make
+	strTempDir = strcat(strLogDir,filesep,'TempRF',sprintf('%04d%02d%02d',c(1),c(2),c(3)));
+	if exist(strTempDir,'dir')
+		warning('off','backtrace')
+		warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
+		warning('on','backtrace')
+		sFiles = dir(strcat(strTempDir,filesep,'*.mat'));
+		intFileNum = numel(sFiles);
+		if intFileNum > 0
+			strCleanFiles = input(sprintf('   Do you wish to delete all %d files in the temporary folder? [y/n]',intFileNum), 's');
+			if strcmpi(strCleanFiles,'y')
+				fprintf('Deleting %d .mat files...\n',intFileNum);
+				for intFile=1:intFileNum
+					delete(strcat(strTempDir,filesep,sFiles(intFile).name));
+				end
+				fprintf('\b  Done!\n');
+			end
+		end
+	else
+		mkdir(strTempDir);
+	end
 	
 	%% general parameters
 	%general variable definitions
 	sDas = struct;
 	sDas.dasno = 22;
 	structEP = struct; %structureElectroPhysiology
-	
+
 	%get default settings in Set
 	runSettingsEphys;
-	
+
 	%assign filename
 	structEP.strFile = mfilename;
-	
+
 	%Das Card variable
 	intDasCard = 0; %0: debug; 2: Leonie's setup
-	
+
 	%screen params
 	structEP.debug = 0;
-	
+
 	%% stimulus params
-	
+
 	%visual space parameters
 	sStimParams = struct;
 	sStimParams.strStimType = 'SparseCheckers';
@@ -71,7 +96,7 @@
 	sStimParams.dblSubjectPosY_cm = 0; % cm; relative to center of screen
 	sStimParams.dblScreenDistance_cm = 10; % cm; measured 16
 	sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
-	
+
 	%screen variables
 	sStimParams.intUseScreen = 1; %which screen to use
 	sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
@@ -80,31 +105,31 @@
 	sStimParams.dblScreenHeight_cm = 25; % cm; measured [29]
 	sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
 	sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
-	
+
 	%get screen size from PTB
 	intOldVerbosity = Screen('Preference', 'Verbosity',1); %stop PTB spamming
 	vecRect=Screen('Rect', sStimParams.intUseScreen);
 	sStimParams.intScreenWidth_pix = vecRect(3) - vecRect(1);
 	sStimParams.intScreenHeight_pix = vecRect(4) - vecRect(2);
-	
+
 	%receptive field size&location parameters
 	sStimParams.dblCheckerSizeX_deg = 5; % width of checker
 	sStimParams.dblCheckerSizeY_deg = 5; % height of checker
 	sStimParams.intOnOffCheckers = 6; % how many are on/off at any frame?
-	
+
 	%stimulus control variables
 	sStimParams.intUseGPU = 1; %set to non-zero to use GPU for rendering stimuli
-	sStimParams.boolAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
+	sStimParams.intAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
 	sStimParams.dblBackground = 0.5; %background intensity (dbl, [0 1])
 	sStimParams.intBackground = round(mean(sStimParams.dblBackground)*255);
 	sStimParams.dblContrast = 100; %contrast; [0-100]
-	
+
 	%get retinal map
 	matMapDegsXYD = buildRetinalSpaceMap(sStimParams);
-	
+
 	%prepare checker-board stimuli for incremental on-the-fly stimulus creation
 	[sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = getSparseCheckerCombos(sStimParams,matMapDegsXYD);
-	
+
 	%% trial timing variables
 	structEP.dblSecsBlankAtStart = 3;
 	structEP.dblSecsBlankPre = 0.4;
@@ -112,7 +137,7 @@
 	structEP.dblSecsBlankPost = 0.1;
 	structEP.dblSecsBlankAtEnd = 3;
 	dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
-	
+
 	%% initialize DasCard & variables
 	%set bits
 	sDas.intDasCard = intDasCard;
@@ -138,7 +163,7 @@
 		end
 		dasclearword;
 	end
-	
+
 	try
 		%% INITALIZE SCREEN
 		fprintf('Starting PsychToolBox extension...\n');
@@ -155,11 +180,11 @@
 		sStimParams.vecRect = vecRect;
 		sStimParams.intScreenWidth_pix = vecRect(3)-vecRect(1);
 		sStimParams.intScreenHeight_pix = vecRect(4)-vecRect(2);
-		
+
 		%% MAXIMIZE PRIORITY
 		priorityLevel=MaxPriority(ptrWindow);
 		Priority(priorityLevel);
-		
+
 		%% get refresh rate
 		dblStimFrameRate=Screen('FrameRate', ptrWindow);
 		intStimFrameRate = round(dblStimFrameRate);
@@ -168,32 +193,32 @@
 		if dblStimFrameDur/dblInterFlipInterval > 1.05 || dblStimFrameDur/dblInterFlipInterval < 0.95
 			warning([mfilename ':InconsistentFlipDur'],sprintf('Something iffy with flip speed and monitor refresh rate detected; frame duration is %fs, while flip interval is %fs!',dblStimFrameDur,dblInterFlipInterval));
 		end
-		
+
 		%% check escape
 		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
-		
+
 		%% PRESENT STIMULI
 		%stim-based logs
 		structEP.intStimNumber = 0;
 		structEP.TrialNumber = [];
 		structEP.ActOnSecs = [];
 		structEP.ActOffSecs = [];
-		
+
 		%show trial summary
 		fprintf('\nFinished preparation at [%s], minimum coverage will take %d presentations (approximately %.2fs)\nWill present sparse checkers until "ESC"\n\n   Waiting for "ENTER"\n',...
 			getTime,intStimsForMinCoverage,intStimsForMinCoverage*dblTrialDur);
-		
+
 		%wait for enter
 		boolEnterPressed = false;
 		while ~boolEnterPressed
 			boolEnterPressed = CheckEnter();
 			pause(0.01);
 		end
-		
+
 		%set timers
 		refTime = tic;
 		dblInitialFlip = Screen('Flip', ptrWindow);
-		
+
 		%% wait initial-blanking
 		fprintf('Starting initial blank (dur=%.3fs) [%s]\n',structEP.dblSecsBlankAtStart,getTime);
 		dblInitialBlankDur = 0;
@@ -203,12 +228,19 @@
 			dblBlankStartFlip = Screen('Flip', ptrWindow);
 			dblInitialBlankDur = dblBlankStartFlip - dblInitialFlip;
 		end
-		
+
 		while ~CheckEsc()
 			%trial start
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow);
 			dblTrialStartFlip = dblLastFlip;
+			
+			%% Send stimulus identification
+			if intDasCard == 1
+				calllib(sDas.strDLL, 'DO_Word', intThisTrial);
+			elseif intDasCard == 2
+				dasword(intThisTrial);
+			end
 			
 			%% prepare stimulus
 			ptrCreationTime = tic;
@@ -216,26 +248,20 @@
 			intThisTrial = numel(sStimObject);
 			ptrTex = Screen('MakeTexture', ptrWindow, gather(matImageRGB));
 			dblCreationDur = toc(ptrCreationTime);
-			
-			%Send stimulus identification
-			if intDasCard == 1
-				calllib(sDas.strDLL, 'DO_Word', intThisTrial);
-			elseif intDasCard == 2
-				dasword(intThisTrial);
-			end
+
 			%send warning if creation took too long
 			if dblCreationDur > structEP.dblSecsBlankPre
 				warning([mfilename ':InsufficientTime'],sprintf('Pre-stimulus blank (%.3fs) was insufficient to pre-render stimulus (took %.3fs)\nPlease increase pre-stimulus blanking time, disable the anti-alias, use fewer checkers, or reduce the screen resolution', structEP.dblSecsBlankPre,dblCreationDur))
 			end
-			
+
 			%get timing
 			dblStartSecs = dblTrialStartFlip-dblInitialFlip;
 			dblStimOnSecs = dblStartSecs + structEP.dblSecsBlankPre;
 			dblStimOffSecs = dblStimOnSecs + structEP.dblSecsStimDur;
 			dblStimDurSecs = dblStimOffSecs - dblStimOnSecs;
 			dblEndSecs = dblStimOffSecs + structEP.dblSecsBlankPost;
-			
-			
+
+
 			%% wait pre-blanking
 			dblPreBlankDur = 0;
 			while dblPreBlankDur <= (dblStimOnSecs - dblStartSecs - dblStimFrameDur)
@@ -244,7 +270,7 @@
 				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblPreBlankDur = dblLastFlip - dblTrialStartFlip;
 			end
-			
+
 			%% show stimulus
 			Screen('DrawTexture',ptrWindow,ptrTex);
 			dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
@@ -255,7 +281,7 @@
 			elseif intDasCard == 2
 				dasbit(sDas.StimOnBit, 1);
 			end
-			
+
 			%wait until stim period is over
 			dblStimDur = 0;
 			while dblStimDur <= (dblStimDurSecs - dblStimFrameDur*2)
@@ -264,23 +290,23 @@
 				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblStimDur = dblLastFlip - dblStimOnFlip;
 			end
-			
+
 			%back to background
 			Screen('FillRect',ptrWindow, sStimParams.intBackground);
 			dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 			dblStimOffFlip = dblLastFlip;
-			
+
 			%send trigger for stimulus off
 			if intDasCard==1
 				calllib(sDas.strDLL, 'DO_Bit', sDas.TargetB, 1);
 			elseif intDasCard == 2
 				dasbit(sDas.StimOffBit, 1);
 			end
-			
+
 			%close texture and wait for post trial seconds
 			Screen('Close',ptrTex);
 			clear ptrTex;
-			
+
 			%% reset DAS card
 			if intDasCard==1
 				%reset all bits to null
@@ -295,6 +321,14 @@
 				end
 				dasclearword;
 			end
+
+			%% save stimulus object
+			try
+				sObjectRF = sStimObject(end);
+				save(strcat(strTempDir,filesep,'ObjectRF',num2str(numel(sStimObject)),'.mat'),'sObjectRF');
+			catch
+				warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
+			end
 			
 			%% wait post-blanking
 			dblThisTrialDur = 0;
@@ -306,7 +340,7 @@
 				dblThisTrialDur = dblLastFlip - dblTrialStartFlip;
 				boolNoFlip = false;
 			end
-			
+
 			%new stim-based output
 			intStimNumber = intThisTrial;
 			structEP.TrialNumber(intStimNumber) = intThisTrial;
@@ -315,18 +349,18 @@
 			structEP.ActOnSecs(intStimNumber) = dblStimOnFlip;
 			structEP.ActOffSecs(intStimNumber) = dblStimOffFlip;
 			structEP.ActEndSecs(intStimNumber) = dblLastFlip;
-			
+
 			%show trial summary
 			dblPercDone = 100*sum(sStimObject(end).UsedLinLocOff(:))/numel(sStimObject(end).UsedLinLocOff);
 			fprintf('Completed trial %d at time=%.3fs (stim dur=%.3fs); coverage is now %.1f%%; Stim creation took %.3fs\n',intThisTrial,dblLastFlip - dblInitialFlip,dblStimOffFlip-dblStimOnFlip,dblPercDone,dblCreationDur);
 		end
-		
+
 		%% save data
 		%save data
 		structEP.sStimParams = sStimParams;
 		structEP.sStimObject = sStimObject;
 		save([strLogDir filesep strFilename], 'structEP','sDas');
-		
+
 		%show trial summary
 		fprintf('Finished experiment & data saving at [%s], waiting for end blank (dur=%.3fs)\n',getTime,structEP.dblSecsBlankAtEnd);
 
@@ -338,7 +372,7 @@
 			dblEndFlip = Screen('Flip', ptrWindow);
 			dblEndBlankDur = dblEndFlip - dblLastFlip;
 		end
-		
+
 		%clean up
 		fprintf('\nExperiment is finished at [%s], closing down and cleaning up...\n',getTime);
 		Screen('Close',ptrWindow);
@@ -350,19 +384,19 @@
 	catch
 		%% catch me and throw me
 		fprintf('\n\n\nError occurred! Trying to save data and clean up...\n\n\n');
-		
+
 		%save data
 		structEP.sStimParams = sStimParams;
 		structEP.sStimObject = sStimObject;
 		save([strLogDir filesep strFilename], 'structEP','sDas');
-		
+
 		%% catch me and throw me
 		Screen('Close');
 		Screen('CloseAll');
 		ShowCursor;
 		Priority(0);
 		Screen('Preference', 'Verbosity',intOldVerbosity);
-		
+
 		%% close DAS
 		%Reset all bits
 		if intDasCard==1
@@ -378,7 +412,7 @@
 			end
 			dasclearword;
 		end
-		
+
 		%% show error
 		rethrow(lasterror); %#ok<LERR>
 	end
