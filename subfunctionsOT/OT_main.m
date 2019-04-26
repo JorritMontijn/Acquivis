@@ -1,27 +1,27 @@
-function RM_main(varargin)
-	%% RM_main Main RF mapper function called every second to check for updates
+function OT_main(varargin)
+	%% OT_main Main RF mapper function called every second to check for updates
 	
 	%get globals
 	global sFig;
-	global sRM;
+	global sOT;
 	cellText = {};
 	
 	%check initialization
-	if ~sRM.IsInitialized,return;end
+	if ~sOT.IsInitialized,return;end
 	%check if busy
 	if sFig.boolIsBusy,return;end
 	sFig.boolIsBusy = true;
 	
 	%get stream variables
 	boolNewData = false;
-	dblEphysTime = sRM.dblEphysTime;
-	intEphysTrial = sRM.intEphysTrial; %not used, only updated
-	dblStimCoverage = sRM.dblStimCoverage; %not used, only updated
-	intStimTrial = sRM.intStimTrial;
-	sStimObject = sRM.sStimObject;
+	dblEphysTime = sOT.dblEphysTime;
+	intEphysTrial = sOT.intEphysTrial; %not used, only updated
+	dblStimCoverage = sOT.dblStimCoverage; %not used, only updated
+	intStimTrial = sOT.intStimTrial;
+	sStimObject = sOT.sStimObject;
 	if isempty(sStimObject),clear sStimObject;end
-	vecTimestamps = sRM.vecTimestamps;
-	matData = sRM.matData;
+	vecTimestamps = sOT.vecTimestamps;
+	matData = sOT.matData;
 	
 	%get data from figure
 	strTank = get(sFig.ptrTextRecording, 'string');
@@ -48,6 +48,8 @@ function RM_main(varargin)
 	dblSubSampleTo = intSubSampleFactor/dblSampFreq;
 	
 	%get trigger times
+	sWarnStruct = warning();
+	warning('off');
 	vecStimOnTime = sMetaData.Trials.stim_onset;
 	matWord = sMetaData.Trials.word;
 	[vecStimOnTime,matWord] = checkTriggersTDT(vecStimOnTime,matWord);
@@ -66,6 +68,7 @@ function RM_main(varargin)
 	else
 		vecStimOffTime = vecStimOnTime + 0.5; %use 500 ms as default duration
 	end
+	warning(sWarnStruct);
 	
 	%get neural data
 	vecNextTimeRange = [dblEphysTime inf];
@@ -88,7 +91,7 @@ function RM_main(varargin)
 		
 		%message
 		cellText{end+1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',min(vecNewTimestamps(1)),max(vecNewTimestamps(end)));
-		RM_updateTextInformation(cellText);
+		OT_updateTextInformation(cellText);
 		
 		%re-reference odd by average of all odd channels, and even by even
 		matNewData = matNewData(:,indUseNewData);
@@ -144,10 +147,10 @@ function RM_main(varargin)
 		
 		
 		%update variables
-		sRM.vecTimestamps = vecTimestamps;
-		sRM.matData = matData;
-		sRM.dblEphysTime = dblEphysTime;
-		sRM.intEphysTrial = intEphysTrial;
+		sOT.vecTimestamps = vecTimestamps;
+		sOT.matData = matData;
+		sOT.dblEphysTime = dblEphysTime;
+		sOT.intEphysTrial = intEphysTrial;
 		
 		%update fig
 		set(sFig.ptrTextEphysTime, 'string',sprintf('%.2f',dblEphysTime));
@@ -156,7 +159,7 @@ function RM_main(varargin)
 		%msg
 		cellText{end} = strcat(cellText{end},'  Completed!');
 		cellText{end+1} = '';
-		RM_updateTextInformation(cellText);
+		OT_updateTextInformation(cellText);
 	end
 	
 	%% stim logs
@@ -170,17 +173,21 @@ function RM_main(varargin)
 	else
 		%if there is new data, load it
 		boolNewData = true;
+		
 		for intLoadObject=vecLoadObjects
 			sLoad = load([strStimPath filesep sprintf('Object%d.mat',intLoadObject)]);
 			sStimObject(intLoadObject) = sLoad.sObject;
 		end
 		
 		%update variables
+		vecOriDegs = cell2mat({sStimObject(:).Orientation});
+		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
+		
 		intStimTrial = vecLoadObjects(1);
-		dblStimCoverage = 100*sum(sStimObject(end).UsedLinLocOff(:))/numel(sStimObject(end).UsedLinLocOff);
-		sRM.sStimObject = sStimObject;
-		sRM.dblStimCoverage = dblStimCoverage;
-		sRM.intStimTrial = intStimTrial;
+		dblStimCoverage = intStimTrial/numel(vecUnique);
+		sOT.sStimObject = sStimObject;
+		sOT.dblStimCoverage = dblStimCoverage;
+		sOT.intStimTrial = intStimTrial;
 		
 		%update fig
 		set(sFig.ptrTextStimTrial, 'string',sprintf('%d',intStimTrial));
@@ -191,24 +198,27 @@ function RM_main(varargin)
 		%msg
 		cellText{end+1} = sprintf('Loaded %d stimulus objects',numel(vecLoadObjects));
 		cellText{end+1} = '';
-		RM_updateTextInformation(cellText);
+		OT_updateTextInformation(cellText);
 	end
 	
 	if boolNewData
 		%% calc RF estimate
-		%ON, OFF, ON-base OFF-base
-		intMaxRep = max([sStimObject(end).UsedLinLocOn(:);sStimObject(end).UsedLinLocOff(:)]);
-		cellStimON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-		cellBaseON = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-		cellStimOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
-		cellBaseOFF = cell(size(sStimObject(end).LinLoc)); %[y by x] cell with [chan x rep] matrix
+		%update variables
+		vecOriDegs = cell2mat({sStimObject(:).Orientation});
+		[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
 		
+		%base, stim
+		cellBase = cell(1,numel(vecUnique));
+		cellStim = cell(1,numel(vecUnique));
+		intTrials = numel(vecTrialIdx);
+		matRespBase = nan(intNumCh,intTrials);
+		matRespStim = nan(intNumCh,intTrials);
+		vecStimTypes = nan(1,intTrials);
+		vecStimOriDeg = nan(1,intTrials);
 		%go through objects and assign to matrices
-		matLinLoc = sStimObject(end).LinLoc;
 		for intTrial=1:numel(sStimObject)
-			%get repetitions of locations
-			vecLinLocOn = sStimObject(intTrial).LinLocOn;
-			vecLinLocOff = sStimObject(intTrial).LinLocOff;
+			%get orientation
+			intStimType = vecTrialIdx(intTrial);
 			
 			%get data
 			dblStartTrial= vecTrialStartTime(intTrial);
@@ -224,24 +234,20 @@ function RM_main(varargin)
 			vecStimENV = mean(matData(:,vecStimBins),2)./numel(vecStimBins);
 			
 			%assign data
-			for intLocOn=vecLinLocOn(:)'
-				cellBaseON{matLinLoc==intLocOn}(:,end+1) = vecBaseENV;
-				cellStimON{matLinLoc==intLocOn}(:,end+1) = vecStimENV;
-			end
-			for intLocOff=vecLinLocOff(:)'
-				cellBaseOFF{matLinLoc==intLocOff}(:,end+1) = vecBaseENV;
-				cellStimOFF{matLinLoc==intLocOff}(:,end+1) = vecStimENV;
-			end
+			matRespBase(:,intTrial) = vecBaseENV;
+			matRespStim(:,intTrial) = vecStimENV;
+			vecStimTypes(intTrial) = intStimType;
+			vecStimOriDeg(intTrial) = vecOriDegs(intTrial);
 		end
 		
 		%% save data to globals
-		sRM.cellStimON = cellStimON; %[y by x] cell with [chan x rep] matrix
-		sRM.cellBaseON = cellBaseON; %[y by x] cell with [chan x rep] matrix
-		sRM.cellStimOFF = cellStimOFF; %[y by x] cell with [chan x rep] matrix
-		sRM.cellBaseOFF = cellBaseOFF; %[y by x] cell with [chan x rep] matrix
+		sOT.matRespBase = matRespBase; %[1 by S] cell with [chan x rep] matrix
+		sOT.matRespStim = matRespStim; %[1 by S] cell with [chan x rep] matrix
+		sOT.vecStimTypes = vecStimTypes; %[1 by S] cell with [chan x rep] matrix
+		sOT.vecStimOriDeg = vecStimOriDeg; %[1 by S] cell with [chan x rep] matrix
 		
 		%% update maps
-		RM_redraw(0);
+		OT_redraw(0);
 	else
 		%% show waiting bar
 		cellOldText = get(sFig.ptrTextInformation, 'string');
@@ -259,12 +265,12 @@ function RM_main(varargin)
 		else
 			cellText{end+1} = strcat(strBaseString,' -');
 		end
-		RM_updateTextInformation(cellText);
+		OT_updateTextInformation(cellText);
 		pause(0.5);
 	end
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
-	RM_unlock(sFig);
+	OT_unlock(sFig);
 end
 

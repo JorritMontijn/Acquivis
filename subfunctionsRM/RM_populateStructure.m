@@ -19,7 +19,7 @@ function sRM = RM_populateStructure(sRM)
 	
 	%default values
 	sRM.metaData.dblSubSampleToReq = 0.011;
-	sRM.metaData.dblFiltFreq = 0;
+	sRM.metaData.dblFiltFreq = 500;
 	
 	%initialize data stream variables
 	sRM.IsInitialized = false;

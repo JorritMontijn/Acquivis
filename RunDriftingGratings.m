@@ -24,10 +24,13 @@
 	while ~boolAcceptInput
 		strMouse = input('Block name and mouse (e.g., B3_MouseX): ', 's');
 		c = clock;
-		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),strMouse,mfilename);
+		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),mfilename,strMouse);
 		if isa(strFilename,'char') && ~isempty(strFilename)
 			if exist([strLogDir filesep strFilename],'file') || exist([strLogDir filesep strFilename '.mat'],'file')
-				strResp = input(['"' strFilename '.mat" already exists. Do you want to overwrite the file? (Y/N) : '],'s');
+				warning('off','backtrace')
+				warning([mfilename ':PathExists'],'File "%s" already exists!',strFilename);
+				warning('on','backtrace')
+				strResp = input('Do you want to overwrite the file? (Y/N)','s');
 				if strcmpi(strResp,'Y')
 					boolAcceptInput = true;
 				else
@@ -39,6 +42,28 @@
 		end
 	end
 	fprintf('Saving output to file "%s.mat"\n',strFilename);
+	
+	%% check if temporary directory exists, clean or make
+	strTempDir = strcat(strLogDir,filesep,'TempObjects');
+	if exist(strTempDir,'dir')
+		warning('off','backtrace')
+		warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
+		warning('on','backtrace')
+		sFiles = dir(strcat(strTempDir,filesep,'*.mat'));
+		intFileNum = numel(sFiles);
+		if intFileNum > 0
+			strCleanFiles = input(sprintf('   Do you wish to delete all %d files in the temporary folder? [y/n]',intFileNum), 's');
+			if strcmpi(strCleanFiles,'y')
+				fprintf('Deleting %d .mat files...\n',intFileNum);
+				for intFile=1:intFileNum
+					delete(strcat(strTempDir,filesep,sFiles(intFile).name));
+				end
+				fprintf('\b  Done!\n');
+			end
+		end
+	else
+		mkdir(strTempDir);
+	end
 	
 	%% general parameters
 	%general variable definitions
@@ -74,7 +99,7 @@
 	sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 	
 	%screen variables
-	sStimParams.intUseScreen = 1; %which screen to use
+	sStimParams.intUseScreen = 2; %which screen to use
 	sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 	sStimParams.dblCornerSize = 1/30; % fraction of screen width
 	sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]
@@ -85,13 +110,14 @@
 	%stimulus control variables
 	sStimParams.intUseGPU = 1;
 	sStimParams.intAntiAlias = 1;
-	sStimParams.str90Deg = '0 degrees is rightward motion; 90 degrees is upward motion';
+	sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motion';
 	sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 	sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
 	sStimParams.vecContrasts = 100; %contrast; [0-100]
-	sStimParams.vecOrientations = 90;%[357 3 87 93 177 183 267 273]; %orientation (0 is drifting rightward)
+	sStimParams.vecOrientations = 91;%[357 3 87 93 177 183 267 273]; %orientation (0 is drifting rightward)
 	sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 	sStimParams.vecTemporalFrequencies = 0.5; %Temporal frequency in cycles per second (0 = static gratings only)
+	
 	
 	%build single-repetition list
 	[sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
@@ -319,6 +345,8 @@
 			dblStimStartFlip = dblLastFlip;
 			dblCycleDur = 1/sThisStimObject.TemporalFrequency;
 			dblPhaseRand = dblCycleDur*rand(1);
+			sThisStimObject.Phase = dblPhaseRand;
+			sStimObject(intStimType).Phase = dblPhaseRand;
 			dblNextFlip = 0;
 			intFlipCounter = 0;
 			vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
@@ -381,6 +409,14 @@
 					dasbit(i,0);
 				end
 				dasclearword;
+			end
+			
+			%% save stimulus object
+			try
+				sObject = sThisStimObject;
+				save(strcat(strTempDir,filesep,'Object',num2str(numel(sStimObject)),'.mat'),'sObject');
+			catch
+				warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
 			end
 			
 			%% wait post-blanking

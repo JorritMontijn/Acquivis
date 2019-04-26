@@ -1,5 +1,5 @@
 %% starting function
-function varargout = runOnlineRF(varargin)
+function varargout = runOnlineOT(varargin)
 	% runDetectCells Detect cells with GUI
 	%
 	%	Version 1.0 [2019-04-02]
@@ -15,8 +15,8 @@ function varargout = runOnlineRF(varargin)
 	gui_Singleton = 1;
 	gui_State = struct('gui_Name',       mfilename, ...
 		'gui_Singleton',  gui_Singleton, ...
-		'gui_OpeningFcn', @runOnlineRF_OpeningFcn, ...
-		'gui_OutputFcn',  @runOnlineRF_OutputFcn, ...
+		'gui_OpeningFcn', @runOnlineOT_OpeningFcn, ...
+		'gui_OutputFcn',  @runOnlineOT_OutputFcn, ...
 		'gui_LayoutFcn',  [] , ...
 		'gui_Callback',   []);
 	if nargin && ischar(varargin{1})
@@ -32,30 +32,29 @@ function varargout = runOnlineRF(varargin)
 	
 end
 %% these are functions that don't do anything, but are required by matlab
-function ptrListSelectImage_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrListSelectMetric_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditMagnification_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditHighpassFreq_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrListSelectChannel_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditDownsample_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrButtonOldFig_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
-function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrButtonNewFig_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
 function ptrEditHighpassFreq_Callback(hObject, eventdata, handles),end %#ok<DEFNU>
+function ptrListSelectDataProcessing_CreateFcn(hObject, eventdata, handles),end %#ok<DEFNU>
 
 %% opening function; initializes output
-function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
+function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	%opening actions
 	
 	%define globals
 	global sFig;
-	global sRM;
+	global sOT;
 	
 	%set closing function
-	set(hObject,'DeleteFcn','RM_DeleteFcn')
+	set(hObject,'DeleteFcn','OT_DeleteFcn')
 	
 	% set rainbow logo
-	I = imread('LogoRFmapper.jpg');
-	%I2 = imresize(I, [100 NaN]);
+	I = imread('OT_mapper-01.jpg');
 	axes(handles.ptrAxesLogo);
 	imshow(I);
 	drawnow;
@@ -65,19 +64,19 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	guidata(hObject, handles);
 	
 	%set default values
-	sRM = struct;
-	sRM = RM_populateStructure(sRM);
+	sOT = struct;
+	sOT = OT_populateStructure(sOT);
 	
 	%populate figure
 	boolInit = true;
-	sFig = RM_populateFigure(handles,boolInit);
+	sFig = OT_populateFigure(handles,boolInit);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
 	objTimer.Period = 1;
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @RM_main;
+	objTimer.TimerFcn = @OT_main;
 	sFig.objTimer = objTimer;
 	start(objTimer);
 	
@@ -85,23 +84,51 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	guidata(hObject, handles);
 end
 %% defines output variables
-function varargout = runOnlineRF_OutputFcn(hObject, eventdata, handles)
+function varargout = runOnlineOT_OutputFcn(hObject, eventdata, handles)
 	%output
 	varargout{1} = handles.output;
 end
+%% change in scatter plot
+function ptrPanelScatterPlot_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
+	%selection is automatically queried by drawing function, 
+	%so no other action is required other than redrawing
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	%redraw
+	OT_redraw(1);
+	
+	%unlock GUI
+	OT_unlock(handles);
+end
+%% change in target figure
+function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handle) %#ok<DEFNU>
+	%selection is automatically queried by drawing function, 
+	%so no other action is required other than redrawing
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	%redraw
+	OT_redraw(1);
+	
+	%unlock GUI
+	OT_unlock(handles);
+end
 %% select which image to display as background
-function ptrListSelectImage_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+function ptrListSelectMetric_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%selected image is automatically queried by drawing function; so no
 	%other action is required other than redrawing
 	
 	%lock GUI
-	RM_lock(handles);
+	OT_lock(handles);
 	
 	%redraw
-	RM_redraw(1);
+	OT_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	OT_unlock(handles);
 end
 %% this function initializes everything
 function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -109,14 +136,14 @@ function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEF
 	
 	%get globals
 	global sFig;
-	global sRM;
+	global sOT;
 	
 	%lock GUI
-	RM_lock(handles);
+	OT_lock(handles);
 	
 	%switch path
 	try
-		oldPath = cd(sRM.metaData.strSourcePathTDT);
+		oldPath = cd(sOT.metaData.strSourcePathTDT);
 	catch
 		oldPath = cd();
 	end
@@ -125,11 +152,11 @@ function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEF
 	strSourcePathTDT = uigetdir('Select TDT data path');
 	%back to old path
 	cd(oldPath);
-	if isempty(strSourcePathTDT) || isscalar(strSourcePathTDT),RM_unlock(handles);return;end
+	if isempty(strSourcePathTDT) || isscalar(strSourcePathTDT),OT_unlock(handles);return;end
 	if strcmpi(strSourcePathTDT(end),filesep)
 		strSourcePathTDT(end) = [];
 	end
-	sRM.strSourcePathTDT = strSourcePathTDT;
+	sOT.strSourcePathTDT = strSourcePathTDT;
 	[strBlock,intStop,intStart] = getFlankedBy(strSourcePathTDT,filesep,'','last');
 	strRecording = strSourcePathTDT(1:(intStart-1));
 	
@@ -141,12 +168,12 @@ function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEF
 	set(sFig.ptrTextBlock, 'string', strBlock);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	OT_unlock(handles);
 	
 	%check if both data path and stim path have been set
-	if isfield(sRM,'strSourcePathTDT') && ~isempty(sRM.strSourcePathTDT) && ...
-			isfield(sRM,'strSourcePathLog') && ~isempty(sRM.strSourcePathLog)
-		[sFig,sRM] = RM_initialize(sFig,sRM);
+	if isfield(sOT,'strSourcePathTDT') && ~isempty(sOT.strSourcePathTDT) && ...
+			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
+		[sFig,sOT] = OT_initialize(sFig,sOT);
 	end
 end
 function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DEFNU>
@@ -154,14 +181,14 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	
 	%get globals
 	global sFig;
-	global sRM;
+	global sOT;
 	
 	%lock GUI
-	RM_lock(handles);
+	OT_lock(handles);
 	
 	%switch path
 	try
-		oldPath = cd(sRM.metaData.strSourcePathLog);
+		oldPath = cd(sOT.metaData.strSourcePathLog);
 	catch
 		oldPath = cd();
 	end
@@ -170,41 +197,51 @@ function ptrButtonChooseSourceStim_Callback(hObject, eventdata, handles) %#ok<DE
 	strSourcePathLog = uigetdir('Select stim log path');
 	%back to old path
 	cd(oldPath);
-	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),RM_unlock(handles);return;end
+	if isempty(strSourcePathLog) || isscalar(strSourcePathLog),OT_unlock(handles);return;end
 	if strcmpi(strSourcePathLog(end),filesep)
 		strSourcePathLog(end) = [];
 	end
-	sRM.strSourcePathLog = strSourcePathLog;
+	sOT.strSourcePathLog = strSourcePathLog;
 	
 	%fill recording/block data
 	set(sFig.ptrTextStimPath, 'string', strSourcePathLog);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	OT_unlock(handles);
 	
 	%check if both data path and stim path have been set
-	if isfield(sRM,'strSourcePathTDT') && ~isempty(sRM.strSourcePathTDT) && ...
-			isfield(sRM,'strSourcePathLog') && ~isempty(sRM.strSourcePathLog)
-		[sFig,sRM] = RM_initialize(sFig,sRM);
+	if isfield(sOT,'strSourcePathTDT') && ~isempty(sOT.strSourcePathTDT) && ...
+			isfield(sOT,'strSourcePathLog') && ~isempty(sOT.strSourcePathLog)
+		[sFig,sOT] = OT_initialize(sFig,sOT);
 	end
 end
 function ptrListSelectChannel_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%lock GUI
-	RM_lock(handles);
+	OT_lock(handles);
 	
 	% update maps
-	RM_redraw(1);
+	OT_redraw(1);
 	
 	%unlock GUI
-	RM_unlock(handles);
+	OT_unlock(handles);
+end
+function ptrListSelectDataProcessing_Callback(hObject, eventdata, handles) %#ok<DEFNU>
+	%lock GUI
+	OT_lock(handles);
+	
+	% update maps
+	OT_redraw(1);
+	
+	%unlock GUI
+	OT_unlock(handles);
 end
 function ptrEditDownsample_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%get globals
 	global sFig;
-	global sRM;
+	global sOT;
 	
 	%default downsample
-	dblSampFreq = sRM.dblSampFreq;
+	dblSampFreq = sOT.dblSampFreq;
 	dblSubSampleToReq = str2double(get(sFig.ptrEditDownsample,'String'));
 	intSubSampleFactor = round(dblSubSampleToReq*dblSampFreq);
 	if isnan(intSubSampleFactor),intSubSampleFactor=0;end
@@ -220,7 +257,7 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	
 	%unlock busy & GUI
 	sFig.boolIsBusy = false;
-	RM_unlock(handles);
+	OT_unlock(handles);
 	
 	%restart timer
 	stop(sFig.objTimer);
@@ -228,58 +265,58 @@ function ptrPanicButton_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	objTimer.Period = 1;
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @RM_main;
+	objTimer.TimerFcn = @OT_main;
 	sFig.objTimer = objTimer;
 	start(objTimer);
 	
 	%update text
-	RM_updateTextInformation({''});
+	OT_updateTextInformation({''});
 	
 end
 function ptrButtonClearAll_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define globals
 	global sFig;
-	global sRM;
+	global sOT;
 	
 	%stop timer
 	stop(sFig.objTimer);
 	
 	%clear data and reset to defaults
-	sRM = struct;
-	sRM = RM_populateStructure(sRM);
-	sFig = RM_populateFigure(handles,false,sFig);
+	sOT = struct;
+	sOT = OT_populateStructure(sOT);
+	sFig = OT_populateFigure(handles,false,sFig);
 	
 	% set timer to query whether there is a data update every second
 	objTimer = timer();
 	objTimer.Period = 1;
 	objTimer.StartDelay = 1;
 	objTimer.ExecutionMode = 'fixedSpacing';
-	objTimer.TimerFcn = @RM_main;
+	objTimer.TimerFcn = @OT_main;
 	sFig.objTimer = objTimer;
 	start(objTimer);
 	
 	%update text
-	RM_updateTextInformation({''});
+	OT_updateTextInformation({''});
 end
 function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<DEFNU>
 	%define global
-	global sRM
+	global sOT
 	
 	%save initialization parameter
-	IsInitialized = sRM.IsInitialized;
+	IsInitialized = sOT.IsInitialized;
 	
 	%clear rest
-	sRM = struct;
-	sRM = RM_populateStructure(sRM);
-	sRM.IsInitialized = IsInitialized;
+	sOT = struct;
+	sOT = OT_populateStructure(sOT);
+	sOT.IsInitialized = IsInitialized;
 	
 	%reload data if initialized
 	if IsInitialized
 		%lock gui
-		RM_lock(handles);
-		RM_updateTextInformation({'Data cleared, re-processing data...'});
+		OT_lock(handles);
+		OT_updateTextInformation({'Data cleared, re-processing data...'});
 		
 		%run main
-		RM_main();
+		OT_main();
 	end
 end
