@@ -1,4 +1,4 @@
-	%function structMP = RunDodecantGratings
+	%function structMP = RunReceptiveFieldMapping
 	%8 seconds per trial
 	%8 trial types (max 64 seconds per rep)
 	%10 repetitions = 11 minutes
@@ -26,7 +26,7 @@
 	cd(strOldPath);
 	boolAcceptInput = false;
 	while ~boolAcceptInput
-		strMouse = 't';%input('session name (mouse/block): ', 's');
+		strMouse = input('Block name and mouse (e.g., B3_MouseX): ', 's');
 		c = clock;
 		strFilename = sprintf('%04d%02d%02d_%s_%s',c(1),c(2),c(3),mfilename,strMouse);
 		if isa(strFilename,'char') && ~isempty(strFilename)
@@ -48,7 +48,7 @@
 	fprintf('Saving output to file "%s.mat"\n',strFilename);
 
 	%% check if temporary directory exists, clean or make
-	strTempDir = strcat(strLogDir,filesep,'TempRF',sprintf('%04d%02d%02d',c(1),c(2),c(3)));
+	strTempDir = strcat(strLogDir,filesep,'TempObjects');
 	if exist(strTempDir,'dir')
 		warning('off','backtrace')
 		warning([mfilename ':PathExists'],'Path "%s" already exists!',strTempDir);
@@ -91,7 +91,7 @@
 
 	%visual space parameters
 	sStimParams = struct;
-	sStimParams.strStimType = 'SparseCheckers';
+	sStimParams.strStimType = 'SparseCheckers'; %{'SparseCheckers','FlickerCheckers'};
 	sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
 	sStimParams.dblSubjectPosY_cm = 0; % cm; relative to center of screen
 	sStimParams.dblScreenDistance_cm = 10; % cm; measured 16
@@ -115,14 +115,16 @@
 	%receptive field size&location parameters
 	sStimParams.dblCheckerSizeX_deg = 5; % width of checker
 	sStimParams.dblCheckerSizeY_deg = 5; % height of checker
-	sStimParams.intOnOffCheckers = 6; % how many are on/off at any frame?
-
+	sStimParams.intOnOffCheckers = 3; %3/6; how many are on/off at any frame? If flicker, this number is doubled
+	
 	%stimulus control variables
 	sStimParams.intUseGPU = 1; %set to non-zero to use GPU for rendering stimuli
 	sStimParams.intAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
 	sStimParams.dblBackground = 0.5; %background intensity (dbl, [0 1])
 	sStimParams.intBackground = round(mean(sStimParams.dblBackground)*255);
 	sStimParams.dblContrast = 100; %contrast; [0-100]
+	sStimParams.dblFlickerFreq = 5; %Hz
+	dblInversionDurSecs = (1/sStimParams.dblFlickerFreq)/2; %Hz
 
 	%get retinal map
 	matMapDegsXYD = buildRetinalSpaceMap(sStimParams);
@@ -132,8 +134,8 @@
 
 	%% trial timing variables
 	structEP.dblSecsBlankAtStart = 3;
-	structEP.dblSecsBlankPre = 0.4;
-	structEP.dblSecsStimDur = 0.5;
+	structEP.dblSecsBlankPre = 0.3;
+	structEP.dblSecsStimDur = 0.6;
 	structEP.dblSecsBlankPost = 0.1;
 	structEP.dblSecsBlankAtEnd = 3;
 	dblTrialDur = structEP.dblSecsBlankPre + structEP.dblSecsStimDur + structEP.dblSecsBlankPost ;
@@ -244,9 +246,13 @@
 			
 			%% prepare stimulus
 			ptrCreationTime = tic;
-			[matImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_crop);
+			[gMatImageRGB,sStimObject] = buildCheckerStim(sStimObject,matMapDegsXY_crop);
+			matImageRGB = gather(gMatImageRGB);
 			intThisTrial = numel(sStimObject);
-			ptrTex = Screen('MakeTexture', ptrWindow, gather(matImageRGB));
+			ptrTex = Screen('MakeTexture', ptrWindow, matImageRGB);
+			if sStimParams.dblFlickerFreq > 0
+				ptrTexInverted = Screen('MakeTexture', ptrWindow, 255-matImageRGB);
+			end
 			dblCreationDur = toc(ptrCreationTime);
 
 			%send warning if creation took too long
@@ -283,10 +289,24 @@
 			end
 
 			%wait until stim period is over
+			boolUseInversion = true;
+			dblLastInversion = 0;
 			dblStimDur = 0;
+			ptrUseTex = ptrTex;
 			while dblStimDur <= (dblStimDurSecs - dblStimFrameDur*2)
-				%do nothing
-				Screen('DrawTexture',ptrWindow,ptrTex);
+				%check for inversion
+				if dblStimDur - dblLastInversion > dblInversionDurSecs
+					dblLastInversion = dblStimDur;
+					if boolUseInversion
+						ptrUseTex = ptrTexInverted;
+					else
+						ptrUseTex = ptrTex;
+					end
+					boolUseInversion = ~boolUseInversion;
+				end
+				
+				%show stimulus
+				Screen('DrawTexture',ptrWindow,ptrUseTex);
 				dblLastFlip = Screen('Flip', ptrWindow,dblLastFlip+dblInterFlipInterval/2);
 				dblStimDur = dblLastFlip - dblStimOnFlip;
 			end
@@ -306,7 +326,11 @@
 			%close texture and wait for post trial seconds
 			Screen('Close',ptrTex);
 			clear ptrTex;
-
+			if exist('ptrTexInverted','var')
+				Screen('Close',ptrTexInverted);
+				clear ptrTexInverted;
+			end
+			
 			%% reset DAS card
 			if intDasCard==1
 				%reset all bits to null
@@ -324,8 +348,8 @@
 
 			%% save stimulus object
 			try
-				sObjectRF = sStimObject(end);
-				save(strcat(strTempDir,filesep,'ObjectRF',num2str(numel(sStimObject)),'.mat'),'sObjectRF');
+				sObject = sStimObject(end);
+				save(strcat(strTempDir,filesep,'Object',num2str(numel(sStimObject)),'.mat'),'sObject');
 			catch
 				warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
 			end

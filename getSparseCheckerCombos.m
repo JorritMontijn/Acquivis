@@ -35,6 +35,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		'dblContrast',[100];... %contrast [0-100]
 		'dblLuminance',[100];...%luminance [0-100]
 		'dblBackground',0.5;...%background intensity (dbl, [0 1])
+		'dblFlickerFreq',0;...%flicker frequency, 0 for none
 		};
 	
 	%% assign supplied or default values
@@ -70,7 +71,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 	
 	%% check stimulus type
 	strStimType = sStimParams.strStimType;
-	cellStimTypes = {'SparseCheckers'};
+	cellStimTypes = {'SparseCheckers','FlickerCheckers'};
 	intStimType = find(ismember(cellStimTypes,strStimType), 1);
 	if isempty(intStimType),error([mfilename ':StimTypeError'],sprintf('Stimulus type "%s" is not recognized [%s]',strStimType,getTime));end
 	
