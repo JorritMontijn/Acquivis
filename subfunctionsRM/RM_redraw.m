@@ -176,7 +176,7 @@ function RM_redraw(varargin)
 	end
 	%clean up figure
 	title(sFig.ptrAxesHandle,strChannel);
-	fixfig(sFig.ptrWindowHandle,false);
+	fixfig(sFig.ptrAxesHandle,false);
 	grid(sFig.ptrAxesHandle,'off');
 	axis(sFig.ptrAxesHandle,'off');
 	drawnow;

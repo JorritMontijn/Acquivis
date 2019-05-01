@@ -15,8 +15,8 @@ function OT_main(varargin)
 	%get stream variables
 	boolNewData = false;
 	dblEphysTime = sOT.dblEphysTime;
-	dblEphysStepSecs = 20;
 	intEphysTrial = sOT.intEphysTrial; %not used, only updated
+	dblStimCoverage = sOT.dblStimCoverage; %not used, only updated
 	intStimTrial = sOT.intStimTrial;
 	sStimObject = sOT.sStimObject;
 	if isempty(sStimObject),clear sStimObject;end
@@ -71,30 +71,28 @@ function OT_main(varargin)
 	end
 	warning(sWarnStruct);
 	
-	%check for new data
-	if (vecTimeRange(end) - 1) > dblEphysTime
-		%message
-		cellText{1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',vecTimeRange(1),vecTimeRange(end));
-		OT_updateTextInformation(cellText);
+	%get neural data
+	vecNextTimeRange = [dblEphysTime inf];
+	[vecNewTimestamps,matNewData,vecChannels,vecRealTimeRange] = getRawDataTDT(sMetaData,vecNextTimeRange);
+	intNumCh = numel(vecChannels);
+	
+	%concatenate data
+	if isempty(vecTimestamps)
+		indUseNewData = true(size(vecNewTimestamps));
+	elseif isempty(vecNewTimestamps)
+		indUseNewData = [];
+	else
+		indUseNewData = vecNewTimestamps > max(vecTimestamps);
 	end
-	while (vecTimeRange(end) - 1) > dblEphysTime
-		%get neural data
-		vecNextTimeRange = [dblEphysTime dblEphysTime+dblEphysStepSecs];
-		[vecNewTimestamps,matNewData,vecChannels,vecRealTimeRange] = getRawDataTDT(sMetaData,vecNextTimeRange);
-		intNumCh = numel(vecChannels);
-		
-		%concatenate data
-		if isempty(vecTimestamps)
-			indUseNewData = true(size(vecNewTimestamps));
-		elseif isempty(vecNewTimestamps)
-			indUseNewData = [];
-		else
-			indUseNewData = vecNewTimestamps > max(vecTimestamps);
-		end
-		
+	
+	if sum(indUseNewData) > dblSampFreq
 		%get timestamps
 		boolNewData = true;
 		vecNewTimestamps = vecNewTimestamps(indUseNewData);
+		
+		%message
+		cellText{end+1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',min(vecNewTimestamps(1)),max(vecNewTimestamps(end)));
+		OT_updateTextInformation(cellText);
 		
 		%re-reference odd by average of all odd channels, and even by even
 		matNewData = matNewData(:,indUseNewData);
@@ -158,8 +156,7 @@ function OT_main(varargin)
 		%update fig
 		set(sFig.ptrTextEphysTime, 'string',sprintf('%.2f',dblEphysTime));
 		set(sFig.ptrTextEphysTrial, 'string',sprintf('%d',intEphysTrial));
-	end
-	if boolNewData
+		
 		%msg
 		cellText{end} = strcat(cellText{end},'  Completed!');
 		cellText{end+1} = '';

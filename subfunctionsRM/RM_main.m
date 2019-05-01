@@ -15,6 +15,7 @@ function RM_main(varargin)
 	%get stream variables
 	boolNewData = false;
 	dblEphysTime = sRM.dblEphysTime;
+	dblEphysStepSecs = 20;
 	intEphysTrial = sRM.intEphysTrial; %not used, only updated
 	dblStimCoverage = sRM.dblStimCoverage; %not used, only updated
 	intStimTrial = sRM.intStimTrial;
@@ -44,6 +45,7 @@ function RM_main(varargin)
 	%read
 	sMetaData = getMetaDataTDT(sMetaData);
 	%assign
+	vecTimeRange = sMetaData.vecTimeRange;
 	dblSampFreq = sMetaData.strms(strcmpi(sMetaData.Myevent, {sMetaData.strms(:).name} )).sampf;
 	dblSubSampleTo = intSubSampleFactor/dblSampFreq;
 	
@@ -67,28 +69,30 @@ function RM_main(varargin)
 		vecStimOffTime = vecStimOnTime + 0.5; %use 500 ms as default duration
 	end
 	
-	%get neural data
-	vecNextTimeRange = [dblEphysTime inf];
-	[vecNewTimestamps,matNewData,vecChannels,vecRealTimeRange] = getRawDataTDT(sMetaData,vecNextTimeRange);
-	intNumCh = numel(vecChannels);
-	
-	%concatenate data
-	if isempty(vecTimestamps)
-		indUseNewData = true(size(vecNewTimestamps));
-	elseif isempty(vecNewTimestamps)
-		indUseNewData = [];
-	else
-		indUseNewData = vecNewTimestamps > max(vecTimestamps);
+	%check for new data
+	if (vecTimeRange(end) - 1) > dblEphysTime
+		%message
+		cellText{1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',vecTimeRange(1),vecTimeRange(end));
+		OT_updateTextInformation(cellText);
 	end
-	
-	if sum(indUseNewData) > dblSampFreq
+	while (vecTimeRange(end) - 1) > dblEphysTime
+		%get neural data
+		vecNextTimeRange = [dblEphysTime dblEphysTime+dblEphysStepSecs];
+		[vecNewTimestamps,matNewData,vecChannels,vecRealTimeRange] = getRawDataTDT(sMetaData,vecNextTimeRange);
+		intNumCh = numel(vecChannels);
+		
+		%concatenate data
+		if isempty(vecTimestamps)
+			indUseNewData = true(size(vecNewTimestamps));
+		elseif isempty(vecNewTimestamps)
+			indUseNewData = [];
+		else
+			indUseNewData = vecNewTimestamps > max(vecTimestamps);
+		end
+		
 		%get timestamps
 		boolNewData = true;
 		vecNewTimestamps = vecNewTimestamps(indUseNewData);
-		
-		%message
-		cellText{end+1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',min(vecNewTimestamps(1)),max(vecNewTimestamps(end)));
-		RM_updateTextInformation(cellText);
 		
 		%re-reference odd by average of all odd channels, and even by even
 		matNewData = matNewData(:,indUseNewData);
@@ -152,11 +156,12 @@ function RM_main(varargin)
 		%update fig
 		set(sFig.ptrTextEphysTime, 'string',sprintf('%.2f',dblEphysTime));
 		set(sFig.ptrTextEphysTrial, 'string',sprintf('%d',intEphysTrial));
-		
+	end
+	if boolNewData
 		%msg
 		cellText{end} = strcat(cellText{end},'  Completed!');
 		cellText{end+1} = '';
-		RM_updateTextInformation(cellText);
+		OT_updateTextInformation(cellText);
 	end
 	
 	%% stim logs
