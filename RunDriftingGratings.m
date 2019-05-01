@@ -115,7 +115,7 @@ sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motio
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
 sStimParams.vecContrasts = 100; %contrast; [0-100]
-sStimParams.vecOrientations = 91;%[357 3 87 93 177 183 267 273]; %orientation (0 is drifting rightward)
+sStimParams.vecOrientations = [357 3 87 93 177 183 267 273]; %orientation (0 is drifting rightward)
 sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 sStimParams.vecTemporalFrequencies = 0.5; %Temporal frequency in cycles per second (0 = static gratings only)
 
@@ -129,7 +129,7 @@ if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 1;
+structEP.intNumRepeats = 100;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.5;
 structEP.dblSecsStimDur = 2;
@@ -356,7 +356,6 @@ try
 		dblCycleDur = 1/sThisStimObject.TemporalFrequency;
 		dblPhaseRand = dblCycleDur*rand(1);
 		sThisStimObject.Phase = dblPhaseRand;
-		sStimObject(intStimType).Phase = dblPhaseRand;
 		dblNextFlip = 0;
 		intFlipCounter = 0;
 		vecStimFlips = nan(1,ceil(dblStimDurSecs/dblStimFrameDur)*2); %pre-allocate twice as many, just to be safe
@@ -420,7 +419,7 @@ try
 		%% save stimulus object
 		try
 			sObject = sThisStimObject;
-			save(strcat(strTempDir,filesep,'Object',num2str(numel(sStimObject)),'.mat'),'sObject');
+			save(strcat(strTempDir,filesep,'Object',num2str(intThisTrial),'.mat'),'sObject');
 		catch
 			warning([mfilename ':SaveError'],'Error saving temporary stimulus object');
 		end

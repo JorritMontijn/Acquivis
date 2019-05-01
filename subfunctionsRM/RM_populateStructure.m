@@ -6,8 +6,8 @@ function sRM = RM_populateStructure(sRM)
 		sRM.metaData = struct;
 	end
 	%default path locations
-	sRM.metaData.strSourcePathTDT = 'D:\Data\Raw\ePhys\DataTanksTDT\';
-	sRM.metaData.strSourcePathLog = 'D:\Data\Raw\ePhys\StimLogs\';
+	sRM.metaData.strSourcePathTDT = 'E:\';
+	sRM.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
 	
 	%filters
 	sRM.metaData.cellFilter{1} = 'Smoothed ON+OFF Stim-Base';

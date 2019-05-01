@@ -6,8 +6,8 @@ function sOT = OT_populateStructure(sOT)
 		sOT.metaData = struct;
 	end
 	%default path locations
-	sOT.metaData.strSourcePathTDT = 'D:\Data\Raw\ePhys\DataTanksTDT\';
-	sOT.metaData.strSourcePathLog = 'D:\Data\Raw\ePhys\StimLogs\';
+	sOT.metaData.strSourcePathTDT = 'E:\';%'E:\' 'D:\Data\Raw\ePhys\DataTanksTDT\';
+	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\'; %'X:\JorritMontijn\TempObjects\';'D:\Data\Raw\ePhys\StimLogs\';
 	
 	%data processing types
 	sOT.metaData.cellProcess{1} = 'Stimulus';

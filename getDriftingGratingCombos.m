@@ -24,6 +24,7 @@ function [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sSti
 		
 		%stimulus control variables
 		'intAntiAlias',1;... % anti-alias? set to "0" to improve performance
+		'intUseParPool',0;... % set to non-zero to specify how many workers to use
 		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
 		'intCornerTrigger',0;... % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 		'dblCornerSize',1/30;... % fraction of screen width

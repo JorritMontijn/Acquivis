@@ -34,6 +34,8 @@ function OT_main(varargin)
 	%default high-pass frequency
 	dblFiltFreq =  str2double(get(sFig.ptrEditHighpassFreq,'String'));
 	
+	%use GPU?
+	boolUseGPU = sOT.UseGPU;
 	
 	%% TDT data
 	%prep meta data
@@ -121,13 +123,22 @@ function OT_main(varargin)
 				'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
 				'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
 				'PassbandRipple',4);
-			gVecFilter = gpuArray(d.Coefficients);
+			if boolUseGPU
+				gVecFilter = gpuArray(d.Coefficients);
+			else
+				gVecFilter = d.Coefficients;
+			end
 		end
 		
 		% apply high-pass filter & calculate envelope
 		for intCh=1:size(matNewData,1)
 			%get signal
-			gVecSignal = gpuArray(double(matNewData(intCh,:)));
+			if boolUseGPU
+				gVecSignal = gpuArray(double(matNewData(intCh,:)));
+			else
+				gVecSignal = double(matNewData(intCh,:));
+			end
+			
 			%filter
 			if ~isempty(dblFiltFreq) && dblFiltFreq > 0
 				gVecSignal = fftfilt(gVecFilter,gVecSignal);

@@ -61,6 +61,22 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	%default high-pass frequency
 	set(sFig.ptrEditHighpassFreq,'String',sprintf('%.1f',sOT.metaData.dblFiltFreq));
 	
+	%test GPU
+	cellText(end+1) = {'Testing GPU Compute Capability...'};
+	OT_updateTextInformation(cellText);
+	objGPU=gpuDevice;
+	strCompCap = objGPU.ComputeCapability;
+	dblCompCap = str2double(strCompCap);
+	if dblCompCap >= 3
+		sOT.UseGPU = true;
+		cellText(end+1) = {['GPU CC is good (' strCompCap '); GPU processing enabled!']};
+		OT_updateTextInformation(cellText);
+	else
+		sOT.UseGPU = false;
+		cellText(end+1) = {['GPU CC is bad (' strCompCap '); GPU processing disabled!']};
+		OT_updateTextInformation(cellText);
+	end
+	
 	%set msg
 	sOT.IsInitialized = true;
 	cellText(end+1) = {''};
