@@ -6,6 +6,8 @@ function varargout = runOnlineRF(varargin)
 	%		Created by Jorrit Montijn
 	%	Version 1.0.1 [2019-04-11]
 	%		Improved high-pass filtering and rewrote for GPU processing
+	%	Version 1.0.2 [2019-05-01]
+	%		Stepwise data loading to reduce memory load
 	
 	%set tags
 	%#ok<*INUSL>
