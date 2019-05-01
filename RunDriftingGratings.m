@@ -66,11 +66,6 @@ else
 end
 
 %% general parameters
-%initialize parallel pool
-%if isempty(gcp('nocreate'))
-%	parpool;
-%end
-
 %general variable definitions
 sDas = struct;
 sDas.dasno = 0;
@@ -113,6 +108,7 @@ sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * 
 sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 
 %stimulus control variables
+sStimParams.intUseParPool = 2; %number of workers in parallel pool; [2]
 sStimParams.intUseGPU = 0;
 sStimParams.intAntiAlias = 1;
 sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motion';
@@ -126,6 +122,11 @@ sStimParams.vecTemporalFrequencies = 0.5; %Temporal frequency in cycles per seco
 
 %build single-repetition list
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
+
+%% initialize parallel pool
+if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
+	parpool(sStimParams.intUseParPool * [1 1]);
+end
 
 %% trial timing variables
 structEP.intNumRepeats = 1;
@@ -158,36 +159,26 @@ structEP.vecTrialEndSecs = structEP.vecTrialStimOffSecs + structEP.dblSecsBlankP
 %% initialize DasCard & variables
 %set bits
 sDas.intDasCard = intDasCard;
-sDas.TrialBit = 0;  %Marks start of the trial
+sDas.TrialBit = 0; %Marks start of the trial
 sDas.StimOnBit = 1; %Stimulus ON bit
 sDas.StimOffBit = 2; %Stimulus OFF bit
-sDas.ResponseBit = 3; %sync bit (black-white-black for a second, send bit on white) EVERY 100 TRIALS OR SO
+sDas.ResponseBit = 3; %response bit (e.g., licking)
 sDas.WordDataSwitch = 4;
 sDas.WordBitShifter = 5;
 sDas.WordDataPorts = [6 7]; 
 
 %initialize
 if intDasCard == 1
-	intBoard = int32(1);  %mcc board = 22; Demo-board = 0
-	if ~libisloaded('DasControl2.dll')
-		loadlibrary('DasControl2.dll', @fndas2)
-		sDas.strDLL = 'DasControl2';
-		LPMem = calllib(sDas.strDLL, 'Das_Init', intBoard, 1);
-		setdatatype(LPMem, 'uint16Ptr', 5, 1024)
+	dasinit(sDas.dasno, 2);
+	for i = [0 1 2 3 4 5 6 7] %set all to 0
+		dasbit(i,0);
 	end
 elseif intDasCard == 2
 	dasinit(sDas.dasno, 2);
-	%dasinit(sDas.dasno);
 	for i = [0 1 2 3 4 5 6 7] %set all to 0
 		dasbit(i,0);
 	end
 	dasclearword;
-elseif intDasCard == 1
-	dasinit(sDas.dasno, 2);
-	for i = [0 1 2 3 4 5 6 7] %set all to 0
-		dasbit(i,0);
-	end
-	doWord(0);
 end
 
 try

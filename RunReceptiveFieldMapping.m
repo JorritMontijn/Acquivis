@@ -88,7 +88,6 @@ intDasCard = 1; %0: debug; 1; new USB on Leonie's setup 2: old PCI on Leonie's s
 structEP.debug = 0;
 
 %% stimulus params
-
 %visual space parameters
 sStimParams = struct;
 sStimParams.strStimType = 'SparseCheckers'; %{'SparseCheckers','FlickerCheckers'};
@@ -118,6 +117,7 @@ sStimParams.dblCheckerSizeY_deg = 5; % height of checker
 sStimParams.intOnOffCheckers = 3; %3/6; how many are on/off at any frame? If flicker, this number is doubled
 
 %stimulus control variables
+sStimParams.intUseParPool = 2; %number of workers in parallel pool; [2]
 sStimParams.intUseGPU = 1; %set to non-zero to use GPU for rendering stimuli
 sStimParams.intAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
 sStimParams.dblBackground = 0.5; %background intensity (dbl, [0 1])
@@ -131,6 +131,11 @@ matMapDegsXYD = buildRetinalSpaceMap(sStimParams);
 
 %prepare checker-board stimuli for incremental on-the-fly stimulus creation
 [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = getSparseCheckerCombos(sStimParams,matMapDegsXYD);
+
+%% initialize parallel pool
+if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
+	parpool(sStimParams.intUseParPool * [1 1]);
+end
 
 %% trial timing variables
 structEP.dblSecsBlankAtStart = 3;
@@ -154,28 +159,17 @@ sDas.WordDataPorts = [6 7];
 
 %initialize
 if intDasCard == 1
-	intBoard = int32(1);  %mcc board = 22; Demo-board = 0
-	if ~libisloaded('DasControl2.dll')
-		loadlibrary('DasControl2.dll', @fndas2)
-		sDas.strDLL = 'DasControl2';
-		LPMem = calllib(sDas.strDLL, 'Das_Init', intBoard, 1);
-		setdatatype(LPMem, 'uint16Ptr', 5, 1024)
+	dasinit(sDas.dasno, 2);
+	for i = [0 1 2 3 4 5 6 7] %set all to 0
+		dasbit(i,0);
 	end
 elseif intDasCard == 2
 	dasinit(sDas.dasno, 2);
-	%dasinit(sDas.dasno);
 	for i = [0 1 2 3 4 5 6 7] %set all to 0
 		dasbit(i,0);
 	end
 	dasclearword;
-elseif intDasCard == 1
-	dasinit(sDas.dasno, 2);
-	for i = [0 1 2 3 4 5 6 7] %set all to 0
-		dasbit(i,0);
-	end
-	doWord(0);
 end
-
 
 try
 	%% INITALIZE SCREEN
@@ -442,7 +436,7 @@ catch
 		end
 	elseif intDasCard==2
 		%reset all bits to null
-		for i = [0 1 2 3 4 5 6 7]  %Error, Stim, Saccade, Trial, Correct,
+		for i = [0 1 2 3 4 5 6 7]
 			dasbit(i,0);
 		end
 		dasclearword;

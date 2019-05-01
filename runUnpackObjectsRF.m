@@ -17,5 +17,5 @@ delete([strTargetPath filesep '*.mat']);
 for intObject=1:numel(sStimObject)
 	sObject = sStimObject(intObject);
 	save(strcat(strTargetPath,filesep,'Object',num2str(intObject),'.mat'),'sObject');
-	pause(1);
+	%pause(1);
 end
