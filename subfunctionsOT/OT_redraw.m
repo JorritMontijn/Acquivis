@@ -64,9 +64,10 @@ function OT_redraw(varargin)
 	strChannel = cellChannels{intChannel};
 	
 	%% prep data
+	intTrials = min([sOT.intEphysTrial sOT.intStimTrial]);
 	
 	%get stimulus parameters
-	vecOriDegs = cell2mat({sOT.sStimObject(:).Orientation});
+	vecOriDegs = cell2mat({sOT.sStimObject(1:intTrials).Orientation});
 	[vecStimTypes,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
 	
 	%get data from globals
@@ -91,6 +92,7 @@ function OT_redraw(varargin)
 	elseif intProcessType == 3 %stim - base
 		matUseResp = matRelResp;
 	end
+	matUseResp = matUseResp(:,1:intTrials);
 	
 	%% get directionality data
 	%get quadrant inclusion lists
@@ -114,10 +116,17 @@ function OT_redraw(varargin)
 	vecVHIndex = ((vecRespLeft + vecRespRight) - (vecRespUp + vecRespDown)) ./ ((vecRespLeft + vecRespRight) + (vecRespUp + vecRespDown));
 	
 	%% get metrics
-	vecDeltaPrime = getDeltaPrime(matUseResp,deg2rad(vecStimOriDeg),true);
-	vecRho_bc = getTuningRho(matUseResp,deg2rad(vecStimOriDeg));
-	vecOPI = getOPI(matUseResp,deg2rad(vecStimOriDeg));
-	vecOSI = getOSI(matUseResp,deg2rad(vecStimOriDeg));
+	try
+		vecDeltaPrime = getDeltaPrime(matUseResp,deg2rad(vecStimOriDeg),true);
+		vecRho_bc = getTuningRho(matUseResp,deg2rad(vecStimOriDeg));
+		vecOPI = getOPI(matUseResp,deg2rad(vecStimOriDeg));
+		vecOSI = getOSI(matUseResp,deg2rad(vecStimOriDeg));
+	catch
+		vecDeltaPrime = nan;
+		vecRho_bc = nan;
+		vecOPI = nan;
+		vecOSI = nan;
+	end
 	
 	%% select metric
 	if intMetric == 1

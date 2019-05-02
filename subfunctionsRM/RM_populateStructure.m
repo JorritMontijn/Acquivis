@@ -23,6 +23,7 @@ function sRM = RM_populateStructure(sRM)
 	
 	%initialize data stream variables
 	sRM.IsInitialized = false;
+	sRM.NumChannels = 0;
 	sRM.dblSampFreq = 0;
 	sRM.dblEphysTime = 0;
 	sRM.intEphysTrial = 0;

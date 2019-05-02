@@ -161,7 +161,8 @@ function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEF
 	sOT.strSourcePathTDT = strSourcePathTDT;
 	[strBlock,intStop,intStart] = getFlankedBy(strSourcePathTDT,filesep,'','last');
 	strRecording = strSourcePathTDT(1:(intStart-1));
-	
+	if strcmp(strRecording(end),filesep),strRecording(end) = [];end
+  
 	%back to old path
 	cd(oldPath);
 	
@@ -304,13 +305,15 @@ function ptrButtonClearAndRecompute_Callback(hObject, eventdata, handles) %#ok<D
 	%define global
 	global sOT
 	
-	%save initialization parameter
+	%save initialization parameters
 	IsInitialized = sOT.IsInitialized;
+	UseGPU = sOT.UseGPU;
 	
 	%clear rest
 	sOT = struct;
 	sOT = OT_populateStructure(sOT);
 	sOT.IsInitialized = IsInitialized;
+	sOT.UseGPU = UseGPU;
 	
 	%reload data if initialized
 	if IsInitialized

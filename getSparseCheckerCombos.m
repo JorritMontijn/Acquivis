@@ -29,6 +29,7 @@ function [sStimParams,sStimObject,matMapDegsXY_crop,intStimsForMinCoverage] = ge
 		'dblCornerSize',1/30;... % fraction of screen width
 		'intAntiAlias',1;... % anti-alias? set to "0" to improve performance
 		'intUseGPU',0;... % set to non-zero to specify which GPU to render stimuli
+		'intUseParPool',0;... % set to non-zero to specify how many workers to use
 		'dblCheckerSizeX_deg',5;... % deg;  width of checker
 		'dblCheckerSizeY_deg',5;... % deg; height of checker
 		'intOnOffCheckers',6;... % how many are on/off at any frame?

@@ -59,6 +59,7 @@ function RM_redraw(varargin)
 	strChannel = cellChannels{intChannel};
 	
 	%% prep data
+	intTrials = min([sRM.intEphysTrial sRM.intStimTrial]);
 	%define smoothing filter
 	matFilter = normpdf(-2:2,0,0.5)' * normpdf(-2:2,0,0.5);
 	matFilter = matFilter ./ sum(matFilter(:));
@@ -123,14 +124,14 @@ function RM_redraw(varargin)
 	end
 	
 	%% magic
-	matStimOnAll = matMeanStimON - mean(matMeanStimON,3);
-	matBaseOnAll = matMeanBaseON - mean(matMeanBaseON,3);
-	matStimOffAll = matMeanStimOFF - mean(matMeanStimOFF,3);
-	matBaseOffAll = matMeanBaseOFF - mean(matMeanBaseOFF,3);
+	matStimOnAll = bsxfun(@minus,matMeanStimON,mean(matMeanStimON,3));
+	matBaseOnAll =  bsxfun(@minus,matMeanBaseON , mean(matMeanBaseON,3));
+	matStimOffAll =  bsxfun(@minus,matMeanStimOFF , mean(matMeanStimOFF,3));
+	matBaseOffAll =  bsxfun(@minus,matMeanBaseOFF , mean(matMeanBaseOFF,3));
 	matRelOn = matStimOnAll - matBaseOnAll;
 	matRelOff = matStimOffAll - matBaseOffAll;
 	matRelSum = matRelOn + matRelOff;
-	matAbs = mean(abs(matRelSum-mean(mean(matRelSum,1),2)),3);
+	matAbs = mean(abs(bsxfun(@minus,matRelSum,mean(mean(matRelSum,1),2))),3);
 	matMagicPlus = conv2(matAbs-mean(matAbs(:)),matFilter,'same');
 	
 	%% select filter
@@ -151,9 +152,9 @@ function RM_redraw(varargin)
 	%% draw image
 	%select channel
 	if strcmp(strChannel,'Magic+')
-		imagesc(sFig.ptrAxesHandle,matMagicPlus);
+		matPlot = matMagicPlus;
 	elseif strcmp(strChannel,'Mean')
-		imagesc(sFig.ptrAxesHandle,mean(matUseMap,3));
+		matPlot = mean(matUseMap,3);
 	elseif strcmp(strChannel,'Best')
 		matFiltSquare = [1 1; 1 1];
 		matFiltSquare = matFiltSquare./sum(matFiltSquare(:));
@@ -165,15 +166,24 @@ function RM_redraw(varargin)
 			vecRangeZ(intChIdx) = max(abs((matSmoothed(:)-dblMu)./dblSd));
 		end
 		[dummy,intBest] = max(vecRangeZ);
-		imagesc(sFig.ptrAxesHandle,matUseMap(:,:,intBest));
+		matPlot = matUseMap(:,:,intBest);
 		strChannel = strcat(strChannel,sprintf('=%d',intBest));
 	elseif strcmp(strChannel(1:2),'Ch')
 		intChannelNumber = str2double(getFlankedBy(strChannel,'Ch-',''));
-		imagesc(sFig.ptrAxesHandle,matUseMap(:,:,intChannelNumber));
+		matPlot = matUseMap(:,:,intChannelNumber);
 	else
 		RM_updateTextInformation({sprintf('Channel "%s" not recognized',strChannel)});
 		return;
 	end
+	strVersion=version();
+	boolGood = str2double(strVersion(1)) > 8;
+	if boolGood
+		imagesc(sFig.ptrAxesHandle,matPlot);
+	else
+		axes(sFig.ptrAxesHandle);
+		imagesc(matPlot);
+	end
+	
 	%clean up figure
 	title(sFig.ptrAxesHandle,strChannel);
 	fixfig(sFig.ptrAxesHandle,false);

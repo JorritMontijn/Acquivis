@@ -97,7 +97,7 @@ sStimParams.dblScreenDistance_cm = 10; % cm; measured 16
 sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %screen variables
-sStimParams.intUseScreen = 1; %which screen to use
+sStimParams.intUseScreen = 2; %which screen to use
 sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
 sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]

@@ -40,7 +40,7 @@ function matTexture = buildStimulusTexture(sStimObject,sStimParams)
 		matTexture = zeros(intScreenHeight_pix,intScreenWidth_pix,intFramesPerCycle,'uint8');
 		for intFrame=1:intFramesPerCycle
 			fprintf('Building frame %d/%d\n',intFrame,intFramesPerCycle);
-			pause(0);
+			pause(0.001);
 			sGratingObject.Phase01 = mod(intFrame/intFramesPerCycle,1);
 			matSingleFrame = buildGratingTexture(sGratingObject,matMapDegsXY);
 			matTexture(:,:,intFrame)=gather(matSingleFrame(:,:,1));

@@ -6,8 +6,8 @@ function sOT = OT_populateStructure(sOT)
 		sOT.metaData = struct;
 	end
 	%default path locations
-	sOT.metaData.strSourcePathTDT = 'E:\';%'E:\' 'D:\Data\Raw\ePhys\DataTanksTDT\';
-	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\'; %'X:\JorritMontijn\TempObjects\';'D:\Data\Raw\ePhys\StimLogs\';
+	sOT.metaData.strSourcePathTDT = 'E:\';
+	sOT.metaData.strSourcePathLog = 'X:\JorritMontijn\TempObjects\';
 	
 	%data processing types
 	sOT.metaData.cellProcess{1} = 'Stimulus';
@@ -29,6 +29,7 @@ function sOT = OT_populateStructure(sOT)
 	
 	%initialize data stream variables
 	sOT.IsInitialized = false;
+	sOT.NumChannels = 0;
 	sOT.dblSampFreq = 0;
 	sOT.dblEphysTime = 0;
 	sOT.intEphysTrial = 0;

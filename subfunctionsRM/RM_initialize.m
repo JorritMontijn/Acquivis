@@ -59,6 +59,26 @@ function [sFig,sRM] = RM_initialize(sFig,sRM)
 	%default high-pass frequency
 	set(sFig.ptrEditHighpassFreq,'String',sprintf('%.1f',sRM.metaData.dblFiltFreq));
 	
+	%test GPU
+	cellText(end+1) = {'Testing GPU Compute Capability...'};
+	RM_updateTextInformation(cellText);
+	try
+		objGPU=gpuDevice;
+		strCompCap = objGPU.ComputeCapability;
+	catch
+		strCompCap = '0';
+	end
+	dblCompCap = str2double(strCompCap);
+	if dblCompCap >= 3
+		sRM.UseGPU = true;
+		cellText(end+1) = {['GPU CC is good (' strCompCap '); GPU processing enabled!']};
+		OT_updateTextInformation(cellText);
+	else
+		sRM.UseGPU = false;
+		cellText(end+1) = {['GPU CC is bad (' strCompCap '); GPU processing disabled!']};
+		OT_updateTextInformation(cellText);
+	end
+	
 	%set msg
 	sRM.IsInitialized = true;
 	cellText(end+1) = {''};

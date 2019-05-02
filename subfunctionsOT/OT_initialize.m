@@ -64,8 +64,12 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	%test GPU
 	cellText(end+1) = {'Testing GPU Compute Capability...'};
 	OT_updateTextInformation(cellText);
-	objGPU=gpuDevice;
-	strCompCap = objGPU.ComputeCapability;
+	try
+		objGPU=gpuDevice;
+		strCompCap = objGPU.ComputeCapability;
+	catch
+		strCompCap = '0';
+	end
 	dblCompCap = str2double(strCompCap);
 	if dblCompCap >= 3
 		sOT.UseGPU = true;

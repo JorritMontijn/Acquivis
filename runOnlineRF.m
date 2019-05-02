@@ -134,7 +134,8 @@ function ptrButtonChooseSourceTDT_Callback(hObject, eventdata, handles) %#ok<DEF
 	sRM.strSourcePathTDT = strSourcePathTDT;
 	[strBlock,intStop,intStart] = getFlankedBy(strSourcePathTDT,filesep,'','last');
 	strRecording = strSourcePathTDT(1:(intStart-1));
-	
+	if strcmp(strRecording(end),filesep),strRecording(end) = [];end
+  
 	%back to old path
 	cd(oldPath);
 	

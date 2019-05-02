@@ -119,17 +119,19 @@ sStimParams.vecOrientations = [357 3 87 93 177 183 267 273]; %orientation (0 is 
 sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 sStimParams.vecTemporalFrequencies = 0.5; %Temporal frequency in cycles per second (0 = static gratings only)
 
-
 %build single-repetition list
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
 
-%% initialize parallel pool
+%% initialize parallel pool && gpu
 if sStimParams.intUseParPool > 0 && isempty(gcp('nocreate'))
 	parpool(sStimParams.intUseParPool * [1 1]);
 end
+if sStimParams.intUseGPU > 0
+   objGPU = gpuDevice(sStimParams.intUseGPU);
+end
 
 %% trial timing variables
-structEP.intNumRepeats = 100;
+structEP.intNumRepeats = 2;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.5;
 structEP.dblSecsStimDur = 2;
@@ -197,8 +199,8 @@ try
 	sStimParams.intScreenHeight_pix = vecRect(4)-vecRect(2);
 	
 	%% MAXIMIZE PRIORITY
-	priorityLevel=MaxPriority(ptrWindow);
-	Priority(priorityLevel);
+	%priorityLevel=MaxPriority(ptrWindow);
+	%Priority(priorityLevel);
 	
 	%% get refresh rate
 	dblStimFrameRate=Screen('FrameRate', ptrWindow);
