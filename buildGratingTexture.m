@@ -99,6 +99,8 @@ function matImageRGB = buildGratingTexture(sGratingObject,matMapDegsXY)
 			strMethod = 'bilinear';
 		end
 		matGrat = imresize(matGratSuperSample2,size(matMapRotX_deg),strMethod);
+	else
+		matGrat = matGratSuperSample2;
 	end
 	
 	%shift window

@@ -92,16 +92,16 @@ structEP.debug = 0;
 sStimParams = struct;
 sStimParams.strStimType = 'SparseCheckers'; %{'SparseCheckers','FlickerCheckers'};
 sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
-sStimParams.dblSubjectPosY_cm = 0; % cm; relative to center of screen
-sStimParams.dblScreenDistance_cm = 10; % cm; measured 16
+sStimParams.dblSubjectPosY_cm = -5; % cm; relative to center of screen
+sStimParams.dblScreenDistance_cm = 12; % cm; measured 16
 sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %screen variables
 sStimParams.intUseScreen = 2; %which screen to use
 sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
-sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]
-sStimParams.dblScreenHeight_cm = 25; % cm; measured [29]
+sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
+sStimParams.dblScreenHeight_cm = 29; % cm; measured [29]
 sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
 sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 
@@ -112,8 +112,8 @@ sStimParams.intScreenWidth_pix = vecRect(3) - vecRect(1);
 sStimParams.intScreenHeight_pix = vecRect(4) - vecRect(2);
 
 %receptive field size&location parameters
-sStimParams.dblCheckerSizeX_deg = 5; % width of checker
-sStimParams.dblCheckerSizeY_deg = 5; % height of checker
+sStimParams.dblCheckerSizeX_deg = 7; % width of checker
+sStimParams.dblCheckerSizeY_deg = 7; % height of checker
 sStimParams.intOnOffCheckers = 3; %3/6; how many are on/off at any frame? If flicker, this number is doubled
 
 %stimulus control variables

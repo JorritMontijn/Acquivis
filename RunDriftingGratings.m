@@ -87,37 +87,37 @@ structEP.debug = 0;
 %visual space parameters
 sStimParams = struct;
 sStimParams.strStimType = 'SquareGrating';
-sStimParams.dblSubjectPosX_cm = -20; % cm; relative to center of screen
-sStimParams.dblSubjectPosY_cm = -15; % cm; relative to center of screen
-sStimParams.dblScreenDistance_cm = 16; % cm; measured
+sStimParams.dblSubjectPosX_cm = 0; % cm; relative to center of screen
+sStimParams.dblSubjectPosY_cm = -5; % cm; relative to center of screen
+sStimParams.dblScreenDistance_cm = 12; % cm; measured
 sStimParams.vecUseMask = 1; %[1] if mask to emulate retinal-space, [0] use screen-space
 
 %receptive field size&location parameters
-sStimParams.vecStimPosX_deg = 40; % deg; relative to subject
-sStimParams.vecStimPosY_deg = 30; % deg; relative to subject
-sStimParams.vecStimulusSize_deg = 35;%circular window in degrees
+sStimParams.vecStimPosX_deg = 20; % deg; relative to subject
+sStimParams.vecStimPosY_deg = 0; % deg; relative to subject
+sStimParams.vecStimulusSize_deg = 90;%circular window in degrees [35]
 sStimParams.vecSoftEdge_deg = 2; %width of cosine ramp  in degrees, [0] is hard edge
 
 %screen variables
 sStimParams.intUseScreen = 2; %which screen to use
 sStimParams.intCornerTrigger = 1; % integer switch; 0=none,1=upper left, 2=upper right, 3=lower left, 4=lower right
 sStimParams.dblCornerSize = 1/30; % fraction of screen width
-sStimParams.dblScreenWidth_cm = 33; % cm; measured [51]
-sStimParams.dblScreenHeight_cm = 25; % cm; measured [29]
+sStimParams.dblScreenWidth_cm = 51; % cm; measured [51]
+sStimParams.dblScreenHeight_cm = 29; % cm; measured [29]
 sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * sStimParams.dblScreenDistance_cm));
 sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 
 %stimulus control variables
 sStimParams.intUseParPool = 2; %number of workers in parallel pool; [2]
-sStimParams.intUseGPU = 0;
-sStimParams.intAntiAlias = 1;
+sStimParams.intUseGPU = 1;
+sStimParams.intAntiAlias = 0;
 sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motion';
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
 sStimParams.vecContrasts = 100; %contrast; [0-100]
-sStimParams.vecOrientations = [357 3 87 93 177 183 267 273]; %orientation (0 is drifting rightward)
+sStimParams.vecOrientations = [357 3 24 45 66 87 93 114 135 156 177 183 204 225 246 267 273 294 315 336]; %orientation (0 is drifting rightward)
 sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
-sStimParams.vecTemporalFrequencies = 0.5; %Temporal frequency in cycles per second (0 = static gratings only)
+sStimParams.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 
 %build single-repetition list
 [sStimParams,sStimObject,sStimTypeList] = getDriftingGratingCombos(sStimParams);
@@ -131,7 +131,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 2;
+structEP.intNumRepeats = 5;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.5;
 structEP.dblSecsStimDur = 2;
