@@ -83,6 +83,10 @@ function runOnlineRF_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig.objTimer = objTimer;
 	start(objTimer);
 	
+	%lock 
+	set(sFig.ptrEditHighpassFreq,'UserData','lock');
+	set(sFig.ptrEditDownsample,'UserData','lock');
+	
 	% Update handles structure
 	guidata(hObject, handles);
 end
@@ -90,6 +94,36 @@ end
 function varargout = runOnlineRF_OutputFcn(hObject, eventdata, handles)
 	%output
 	varargout{1} = handles.output;
+end
+%% change in data type to load
+function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
+	%selection is automatically queried by main function, so no other
+	%action is required except sending a confirmation message
+	
+	%get global
+	global sFig;
+	
+	%lock GUI
+	RM_lock(handles);
+	
+	%get selected button
+	intLoadEnv = get(handles.ptrButtonDataENV,'Value');
+	if intLoadEnv == 1
+		strLoadDataType = 'dENV';
+		set(sFig.ptrEditHighpassFreq,'UserData','lock');
+		set(sFig.ptrEditDownsample,'UserData','lock');
+	else
+		strLoadDataType = 'dRAW';
+		set(sFig.ptrEditHighpassFreq,'UserData','');
+		set(sFig.ptrEditDownsample,'UserData','');
+	end
+	
+	%update message
+	cellText = {['Switched data type to ' strLoadDataType]};
+	RM_updateTextInformation(cellText);
+	
+	%unlock GUI
+	RM_unlock(handles);
 end
 %% select which image to display as background
 function ptrListSelectImage_Callback(hObject, eventdata, handles) %#ok<DEFNU>
