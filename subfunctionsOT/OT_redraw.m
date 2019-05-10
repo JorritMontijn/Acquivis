@@ -118,7 +118,7 @@ function OT_redraw(varargin)
 	%% get metrics
 	try
 		vecDeltaPrime = getDeltaPrime(matUseResp,deg2rad(vecStimOriDeg),true);
-		vecRho_bc = getTuningRho(matUseResp,deg2rad(vecStimOriDeg));
+		vecRho_bc = zeros(size(vecDeltaPrime));%getTuningRho(matUseResp,deg2rad(vecStimOriDeg));
 		vecOPI = getOPI(matUseResp,deg2rad(vecStimOriDeg));
 		vecOSI = getOSI(matUseResp,deg2rad(vecStimOriDeg));
 	catch
