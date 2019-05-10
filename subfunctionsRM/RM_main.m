@@ -20,7 +20,7 @@ function RM_main(varargin)
 		%get stream variables
 		boolNewData = false;
 		dblEphysTime = sRM.dblEphysTime;
-		dblEphysStepSecs = 20;
+		dblEphysStepSecs = 15;
 		intEphysTrial = sRM.intEphysTrial; %not used, only updated
 		dblStimCoverage = sRM.dblStimCoverage; %not used, only updated
 		intStimTrial = sRM.intStimTrial;
@@ -34,6 +34,14 @@ function RM_main(varargin)
 		strBlock = get(sFig.ptrTextBlock, 'string');
 		strStimPath = get(sFig.ptrTextStimPath, 'string');
 		
+		%get data type from figure
+		intLoadEnv = get(sFig.ptrButtonDataENV,'Value');
+		if intLoadEnv == 1
+			strLoadDataType = 'dENV';
+		else
+			strLoadDataType = 'dRAW';
+		end
+		
 		%default downsample
 		intSubSampleFactor = str2double(get(sFig.ptrTextDownsampleFactor,'String'));
 		
@@ -46,7 +54,7 @@ function RM_main(varargin)
 		%% TDT data
 		%prep meta data
 		sMetaData = struct;
-		sMetaData.Myevent = 'dRAW';
+		sMetaData.Myevent = strLoadDataType;
 		sMetaData.Mytank = strTank;
 		sMetaData.Myblock = strBlock;
 		%read
@@ -106,62 +114,67 @@ function RM_main(varargin)
 			matNewData = matNewData(:,indUseNewData);
 			matNewData(1:2:end,:) = bsxfun(@minus,matNewData(1:2:end,:),cast(mean(matNewData(1:2:end,:),1),'like',matNewData)); %odd
 			matNewData(2:2:end,:) = bsxfun(@minus,matNewData(2:2:end,:),cast(mean(matNewData(2:2:end,:),1),'like',matNewData)); %even
-			
-			%get subsample vector
-			vecSubNewTimestamps = vecNewTimestamps(1:intSubSampleFactor:end);
-			intNewPoints = numel(vecNewTimestamps);
-			intSubNewPoints = ceil(intNewPoints/intSubSampleFactor);
-			vecAssignTo = sort(repmat(1:intSubNewPoints,[1 intSubSampleFactor]));
-			vecSubNewTimestamps(end) = [];
-			dblEphysTime = vecSubNewTimestamps(end);
-			vecAssignTo = vecAssignTo(1:intNewPoints);
-			
-			%pre-allocate downsampled data matrix
-			matSubNewData = zeros(intNumCh,intSubNewPoints-1,'single');
-			
-			%design filter
-			if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-				d = designfilt('highpassfir',...
-					'SampleRate',dblSampFreq, ...
-					'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
-					'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
-					'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
-					'PassbandRipple',4);
-				if boolUseGPU
-					gVecFilter = gpuArray(d.Coefficients);
-				else
-					gVecFilter = d.Coefficients;
-				end
-			end
-			
-			% apply high-pass filter & calculate envelope
-			for intCh=1:size(matNewData,1)
-				%get signal
-				if boolUseGPU
-					gVecSignal = gpuArray(double(matNewData(intCh,:)));
-				else
-					gVecSignal = double(matNewData(intCh,:));
+			if strcmpi(strLoadDataType,'dRAW')
+				%get subsample vector
+				vecSubNewTimestamps = vecNewTimestamps(1:intSubSampleFactor:end);
+				intNewPoints = numel(vecNewTimestamps);
+				intSubNewPoints = ceil(intNewPoints/intSubSampleFactor);
+				vecAssignTo = sort(repmat(1:intSubNewPoints,[1 intSubSampleFactor]));
+				vecSubNewTimestamps(end) = [];
+				dblEphysTime = vecSubNewTimestamps(end);
+				vecAssignTo = vecAssignTo(1:intNewPoints);
+				
+				%pre-allocate downsampled data matrix
+				matSubNewData = zeros(intNumCh,intSubNewPoints-1,'single');
+				
+				%design filter
+				if ~isempty(dblFiltFreq) && dblFiltFreq > 0
+					d = designfilt('highpassfir',...
+						'SampleRate',dblSampFreq, ...
+						'StopbandFrequency',dblFiltFreq-dblFiltFreq/10, ...     % Frequency constraints
+						'PassbandFrequency',dblFiltFreq+dblFiltFreq/10, ...
+						'StopbandAttenuation',dblFiltFreq/10, ...    % Magnitude constraints
+						'PassbandRipple',4);
+					if boolUseGPU
+						gVecFilter = gpuArray(d.Coefficients);
+					else
+						gVecFilter = d.Coefficients;
+					end
 				end
 				
-				%filter
-				if ~isempty(dblFiltFreq) && dblFiltFreq > 0
-					gVecSignal = fftfilt(gVecFilter,gVecSignal);
+				% apply high-pass filter & calculate envelope
+				for intCh=1:size(matNewData,1)
+					%get signal
+					if boolUseGPU
+						gVecSignal = gpuArray(double(matNewData(intCh,:)));
+					else
+						gVecSignal = double(matNewData(intCh,:));
+					end
 					
-					%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
+					%filter
+					if ~isempty(dblFiltFreq) && dblFiltFreq > 0
+						gVecSignal = fftfilt(gVecFilter,gVecSignal);
+						
+						%gVecSignal = highpass(gVecSignal,dblFiltFreq,dblSampFreq);
+					end
+					%envelope
+					dblEnvLengthSecs = 3*dblSubSampleTo; %10*dblSubSampleTo;
+					intFilterSize = round(dblSampFreq*dblEnvLengthSecs);
+					[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
+					%downsample
+					vecSubEnv = accumarray(vecAssignTo(:),gather(abs(vecEnvHigh)+abs(vecEnvLow)))'/intSubSampleFactor;
+					%assign data
+					matSubNewData(intCh,:) = vecSubEnv(1:(end-1));
 				end
-				%envelope
-				dblEnvLengthSecs = 3*dblSubSampleTo; %10*dblSubSampleTo;
-				intFilterSize = round(dblSampFreq*dblEnvLengthSecs);
-				[vecEnvHigh,vecEnvLow] = getEnvelope(gVecSignal,intFilterSize);
-				%downsample
-				vecSubEnv = accumarray(vecAssignTo(:),gather(abs(vecEnvHigh)+abs(vecEnvLow)))'/intSubSampleFactor;
-				%assign data
-				matSubNewData(intCh,:) = vecSubEnv(1:(end-1));
+				
+				%add to matrix
+				matData = cat(2,matData,matSubNewData);
+				vecTimestamps = cat(2,vecTimestamps,vecSubNewTimestamps);
+			else
+				%add to matrix
+				matData = cat(2,matData,matNewData);
+				vecTimestamps = cat(2,vecTimestamps,vecNewTimestamps);
 			end
-			
-			%add to matrix
-			matData = cat(2,matData,matSubNewData);
-			vecTimestamps = cat(2,vecTimestamps,vecSubNewTimestamps);
 			
 			
 			%update variables
@@ -298,4 +311,4 @@ function RM_main(varargin)
 		ME
 	end
 end
-	
+

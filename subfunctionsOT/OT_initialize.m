@@ -30,7 +30,7 @@ function [sFig,sOT] = OT_initialize(sFig,sOT)
 	%lock GUI
 	OT_lock(sFig);
 	drawnow;
-	
+			
 	%data processing
 	set(sFig.ptrListSelectDataProcessing,'String',sOT.metaData.cellProcess);
 	

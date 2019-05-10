@@ -82,6 +82,10 @@ function runOnlineOT_OpeningFcn(hObject, eventdata, handles, varargin)
 	sFig.objTimer = objTimer;
 	start(objTimer);
 	
+	%lock 
+	set(sFig.ptrEditHighpassFreq,'UserData','lock');
+	set(sFig.ptrEditDownsample,'UserData','lock');
+	
 	% Update handles structure
 	guidata(hObject, handles);
 end
@@ -105,7 +109,7 @@ function ptrPanelScatterPlot_SelectionChangedFcn(hObject, eventdata, handles) %#
 	OT_unlock(handles);
 end
 %% change in target figure
-function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handle) %#ok<DEFNU>
+function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
 	%selection is automatically queried by drawing function, 
 	%so no other action is required other than redrawing
 	
@@ -114,6 +118,36 @@ function ptrPanelPlotIn_SelectionChangedFcn(hObject, eventdata, handle) %#ok<DEF
 	
 	%redraw
 	OT_redraw(1);
+	
+	%unlock GUI
+	OT_unlock(handles);
+end
+%% change in data type to load
+function ptrPanelDataType_SelectionChangedFcn(hObject, eventdata, handles) %#ok<DEFNU>
+	%selection is automatically queried by main function, so no other
+	%action is required except sending a confirmation message
+	
+	%get global
+	global sFig;
+	
+	%lock GUI
+	OT_lock(handles);
+	
+	%get selected button
+	intLoadEnv = get(handles.ptrButtonDataENV,'Value');
+	if intLoadEnv == 1
+		strLoadDataType = 'dENV';
+		set(sFig.ptrEditHighpassFreq,'UserData','lock');
+		set(sFig.ptrEditDownsample,'UserData','lock');
+	else
+		strLoadDataType = 'dRAW';
+		set(sFig.ptrEditHighpassFreq,'UserData','');
+		set(sFig.ptrEditDownsample,'UserData','');
+	end
+	
+	%update message
+	cellText = {['Switched data type to ' strLoadDataType]};
+	OT_updateTextInformation(cellText);
 	
 	%unlock GUI
 	OT_unlock(handles);

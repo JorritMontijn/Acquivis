@@ -8,8 +8,9 @@ function RM_unlock(handles)
 		if ~isempty(strfind(cellNames{intPtr},'ptrButton')) ||...
 				~isempty(strfind(cellNames{intPtr},'ptrList')) ||...
 				~isempty(strfind(cellNames{intPtr},'ptrEdit'))
-			
-			set(handles.(cellNames{intPtr}),'Enable','on');
+			if ~strcmpi(get(handles.(cellNames{intPtr}),'UserData'),'lock')
+				set(handles.(cellNames{intPtr}),'Enable','on');
+			end
 		end
 	end
 end
