@@ -67,11 +67,7 @@ function OT_main(varargin)
 		[vecStimOnTime,matWord] = checkTriggersTDT(vecStimOnTime,matWord);
 		vecTrialStartTime = matWord(:,1);
 		vecStimType = matWord(:,2);
-		if ~isnan(vecStimType(end)) && vecStimType(end) ~= numel(vecStimType)
-			cellText{end+1} = 'Warning: ePhys trial count mismatch!';
-			cellText{end+1} = sprintf('# of triggers: %d; trial number: %d',numel(vecStimType),vecStimType(end));
-			cellText{end+1} = '';
-		end
+		
 		if isfield(sMetaData.Trials,'stim_offset')
 			vecStimOffTime = checkTriggersTDT(sMetaData.Trials.stim_offset,matWord);
 		elseif isfield(sMetaData.Trials,'target_onset')
@@ -79,6 +75,20 @@ function OT_main(varargin)
 		else
 			vecStimOffTime = vecStimOnTime + 0.5; %use 500 ms as default duration
 		end
+		if ~isnan(vecStimType(end)) && vecStimType(end) ~= numel(vecStimType)
+			%msg
+			cellText{end+1} = 'Warning: ePhys trial count mismatch!';
+			cellText{end+1} = sprintf('# of triggers: %d; trial number: %d',numel(vecStimType),vecStimType(end));
+			cellText{end+1} = '';
+			
+			%remove trials
+			intMaxTrialNum = min([numel(vecTrialStartTime) numel(vecStimType) numel(vecStimOnTime) numel(vecStimOffTime)]);
+			vecTrialStartTime(intMaxTrialNum:end) = [];
+			vecStimType(intMaxTrialNum:end) = [];
+			vecStimOnTime(intMaxTrialNum:end) = [];
+			vecStimOffTime(intMaxTrialNum:end) = [];
+		end
+		
 		warning(sWarnStruct);
 		intEphysTrial = numel(vecStimOffTime);
 		
@@ -171,6 +181,7 @@ function OT_main(varargin)
 				vecTimestamps = cat(2,vecTimestamps,vecSubNewTimestamps);
 			else
 				%add to matrix
+				dblEphysTime = vecNewTimestamps(end);
 				matData = cat(2,matData,matNewData);
 				vecTimestamps = cat(2,vecTimestamps,vecNewTimestamps);
 			end
@@ -214,7 +225,7 @@ function OT_main(varargin)
 			[vecTrialIdx,vecUnique,vecCounts,cellSelect,vecRepetition] = label2idx(vecOriDegs);
 			
 			intStimTrial = vecLoadObjects(1);
-			dblStimCoverage = intStimTrial/numel(vecUnique);
+			dblStimCoverage = (intStimTrial/numel(vecUnique))*100;
 			sOT.sStimObject = sStimObject;
 			sOT.dblStimCoverage = dblStimCoverage;
 			sOT.intStimTrial = intStimTrial;
@@ -305,7 +316,7 @@ function OT_main(varargin)
 		OT_unlock(sFig);
 		
 		%send error
-		ME
+		dispErr(ME);
 	end
 %end
 

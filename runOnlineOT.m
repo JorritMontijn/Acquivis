@@ -8,6 +8,8 @@ function varargout = runOnlineOT(varargin)
 	%		Improved high-pass filtering and rewrote for GPU processing
 	%	Version 1.0.2 [2019-05-01]
 	%		Stepwise data loading to reduce memory load
+	%	Version 1.0.3 [2019-05-10]
+	%		ENV-support and bug fixes
 	
 	%set tags
 	%#ok<*INUSL>

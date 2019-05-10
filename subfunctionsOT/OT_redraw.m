@@ -166,6 +166,8 @@ function OT_redraw(varargin)
 		strTitle = strcat(strChannel,sprintf('; %s''=%.3f; %s=%.3f; OPI=%.3f; OSI=%.3f; LR=%.3f; UD=%.3f; VH=%.3f',...
 			getGreek(4,'lower'),vecDeltaPrime(intChNr),getGreek(17,'lower'),vecRho_bc(intChNr),...
 			vecOPI(intChNr),vecOSI(intChNr),vecLRIndex(intChNr),vecUDIndex(intChNr),vecVHIndex(intChNr)));
+	else
+		strTitle = ' Mean';
 	end
 	
 	%% plot 

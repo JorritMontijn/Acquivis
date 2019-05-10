@@ -70,17 +70,25 @@ function RM_main(varargin)
 		[vecStimOnTime,matWord] = checkTriggersTDT(vecStimOnTime,matWord);
 		vecTrialStartTime = matWord(:,1);
 		vecStimType = matWord(:,2);
-		if ~isnan(vecStimType(end)) && vecStimType(end) ~= numel(vecStimType)
-			cellText{end+1} = 'Warning: ePhys trial count mismatch!';
-			cellText{end+1} = sprintf('# of triggers: %d; trial number: %d',numel(vecStimType),vecStimType(end));
-			cellText{end+1} = '';
-		end
 		if isfield(sMetaData.Trials,'stim_offset')
 			vecStimOffTime = checkTriggersTDT(sMetaData.Trials.stim_offset,matWord);
 		elseif isfield(sMetaData.Trials,'target_onset')
 			vecStimOffTime = checkTriggersTDT(sMetaData.Trials.target_onset,matWord);
 		else
 			vecStimOffTime = vecStimOnTime + 0.5; %use 500 ms as default duration
+		end
+		if ~isnan(vecStimType(end)) && vecStimType(end) ~= numel(vecStimType)
+			%msg
+			cellText{end+1} = 'Warning: ePhys trial count mismatch!';
+			cellText{end+1} = sprintf('# of triggers: %d; trial number: %d',numel(vecStimType),vecStimType(end));
+			cellText{end+1} = '';
+			
+			%remove trials
+			intMaxTrialNum = min([numel(vecTrialStartTime) numel(vecStimType) numel(vecStimOnTime) numel(vecStimOffTime)]);
+			vecTrialStartTime(intMaxTrialNum:end) = [];
+			vecStimType(intMaxTrialNum:end) = [];
+			vecStimOnTime(intMaxTrialNum:end) = [];
+			vecStimOffTime(intMaxTrialNum:end) = [];
 		end
 		intEphysTrial = numel(vecStimOffTime);
 		
@@ -90,6 +98,7 @@ function RM_main(varargin)
 			cellText{1} = sprintf('Processing new ePhys data [%.1fs - %.1fs] ...',vecTimeRange(1),vecTimeRange(end));
 			RM_updateTextInformation(cellText);
 		end
+		%%
 		while (vecTimeRange(end) - 1) > dblEphysTime
 			%get neural data
 			vecNextTimeRange = [dblEphysTime dblEphysTime+dblEphysStepSecs];
@@ -172,6 +181,7 @@ function RM_main(varargin)
 				vecTimestamps = cat(2,vecTimestamps,vecSubNewTimestamps);
 			else
 				%add to matrix
+				dblEphysTime = vecNewTimestamps(end);
 				matData = cat(2,matData,matNewData);
 				vecTimestamps = cat(2,vecTimestamps,vecNewTimestamps);
 			end
@@ -307,8 +317,8 @@ function RM_main(varargin)
 		sFig.boolIsBusy = false;
 		RM_unlock(sFig);
 		
-		send error
-		ME
+		%send error
+		dispErr(ME);
 	end
 end
 
