@@ -9,11 +9,16 @@ function matMapDegsXYD = buildRetinalSpaceMap(sStimParams)
 	
 	%check whether gpu computing is requested
 	if sStimParams.intUseGPU > 0
+		try
 		objDevice = gpuDevice();
 		if objDevice.Index ~= sStimParams.intUseGPU
 			fprintf('GPU processing on device %d requested\n',sStimParams.intUseGPU);
 			objDevice = gpuDevice(sStimParams.intUseGPU);
 			fprintf('\b; Device "%s" selected; Compute capability is %s\n',objDevice.Name,objDevice.ComputeCapability);
+		end
+		catch
+			fprintf('GPU processing failed...\n');
+			sStimParams.intUseGPU = 0;
 		end
 	end
 	
