@@ -108,14 +108,14 @@ sStimParams.dblScreenWidth_deg = 2 * atand(sStimParams.dblScreenWidth_cm / (2 * 
 sStimParams.dblScreenHeight_deg = 2 * atand(sStimParams.dblScreenHeight_cm / (2 * sStimParams.dblScreenDistance_cm));
 
 %stimulus control variables
-sStimParams.intUseParPool = 2; %number of workers in parallel pool; [2]
+sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
 sStimParams.intUseGPU = 1;
 sStimParams.intAntiAlias = 0;
 sStimParams.str90Deg = '0 degrees is leftward motion; 90 degrees is upward motion';
 sStimParams.vecBackgrounds = 0.5; %background intensity (dbl, [0 1])
 sStimParams.intBackground = round(mean(sStimParams.vecBackgrounds)*255);
 sStimParams.vecContrasts = 100; %contrast; [0-100]
-sStimParams.vecOrientations = [357 3 24 45 66 87 93 114 135 156 177 183 204 225 246 267 273 294 315 336]; %orientation (0 is drifting rightward)
+sStimParams.vecOrientations = 0;%[357 3 24 45 66 87 93 114 135 156 177 183 204 225 246 267 273 294 315 336]; %orientation (0 is drifting rightward)
 sStimParams.vecSpatialFrequencies = 0.08; %Spat Frequency in cyc/deg 0.08
 sStimParams.vecTemporalFrequencies = 1; %Temporal frequency in cycles per second (0 = static gratings only)
 
@@ -131,7 +131,7 @@ if sStimParams.intUseGPU > 0
 end
 
 %% trial timing variables
-structEP.intNumRepeats = 5;
+structEP.intNumRepeats = 10;
 structEP.dblSecsBlankAtStart = 3;
 structEP.dblSecsBlankPre = 0.5;
 structEP.dblSecsStimDur = 2;
@@ -295,6 +295,10 @@ try
 	end
 	
 	for intThisTrial = 1:structEP.intTrialNum
+		%% check escape
+		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
+		
+		%% prep trial
 		%trial start
 		Screen('FillRect',ptrWindow, sStimParams.intBackground);
 		dblTrialStartFlip = Screen('Flip', ptrWindow);
@@ -303,9 +307,6 @@ try
 		if intDasCard > 0
 			dasbit(sDas.TrialBit,1);
 		end
-		
-		%% check escape
-		if CheckEsc(),error([mfilename ':EscapePressed'],'Esc pressed; exiting');end
 		
 		%Send stimulus identification
 		if intDasCard == 1

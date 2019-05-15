@@ -117,7 +117,7 @@ sStimParams.dblCheckerSizeY_deg = 7; % height of checker
 sStimParams.intOnOffCheckers = 3; %3/6; how many are on/off at any frame? If flicker, this number is doubled
 
 %stimulus control variables
-sStimParams.intUseParPool = 2; %number of workers in parallel pool; [2]
+sStimParams.intUseParPool = 0; %number of workers in parallel pool; [2]
 sStimParams.intUseGPU = 1; %set to non-zero to use GPU for rendering stimuli
 sStimParams.intAntiAlias = 1; %which level k of anti-alias to use? Grid size is 2^k - 1
 sStimParams.dblBackground = 0.5; %background intensity (dbl, [0 1])
@@ -247,12 +247,6 @@ try
 			dasbit(sDas.TrialBit,1);
 		end
 		
-		% Send stimulus identification
-		if intDasCard == 1
-			doWord(intThisTrial);
-		elseif intDasCard == 2
-			dasword(intThisTrial);
-		end
 		
 		%% prepare stimulus
 		ptrCreationTime = tic;
@@ -264,6 +258,13 @@ try
 			ptrTexInverted = Screen('MakeTexture', ptrWindow, 255-matImageRGB);
 		end
 		dblCreationDur = toc(ptrCreationTime);
+		
+		% Send stimulus identification
+		if intDasCard == 1
+			doWord(intThisTrial);
+		elseif intDasCard == 2
+			dasword(intThisTrial);
+		end
 		
 		%send warning if creation took too long
 		if dblCreationDur > structEP.dblSecsBlankPre
