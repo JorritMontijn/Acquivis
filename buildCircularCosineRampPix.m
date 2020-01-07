@@ -1,4 +1,4 @@
-function rampGrid = buildCircularCosineRamp(imSize,windowDiameter,rampWidth)
+function rampGrid = buildCircularCosineRampPix(imSize,windowDiameter,rampWidth)
 	%buildCircularCosineRamp outputs a mask with 1s at center and a circular
 	%cosine ramp going from 1 to 0 with the specified sizes
 	%   syntax: rampGrid = buildCircularCosineRamp(imSize,windowDiameter,rampWidth)
